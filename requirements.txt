@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]==0.20.0
+python-dotenv
+pydantic-settings
+sqlalchemy
+pymysql
+python-jose[cryptography]
+python-multipart
+passlib
+bcrypt
+pytz
+requests
+pydantic[email]

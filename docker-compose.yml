@@ -1,0 +1,14 @@
+version: '3.9'
+services:
+    fastapi_roechling:
+        image: fastapi-roechling-office:latest
+        container_name: fastapi-roechling-office-container
+        restart: always
+        ports:
+            - "8005:8005"
+        volumes:
+            - /volume1/docker/fastapi_roechling_office/global.log:/app/global.log
+            - /volume1/docker/fastapi_roechling_office/.env:/app/.env
+            - /volume1/docker/fastapi_roechling_office/data:/app/data
+        environment:
+            - TZ=Europe/Prague

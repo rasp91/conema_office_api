@@ -1,0 +1,8 @@
+[tool.isort]
+profile = "black"
+line_length = 140
+length_sort = true
+reverse_sort = true
+
+[tool.black]
+line-length = 140
