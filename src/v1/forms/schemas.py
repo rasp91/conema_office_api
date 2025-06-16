@@ -1,6 +1,6 @@
 from datetime import datetime, date
 
-from pydantic import field_validator, BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from src.database.schemas import UserModel
 

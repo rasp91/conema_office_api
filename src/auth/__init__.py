@@ -11,7 +11,6 @@ from jose import jwt, JWTError
 
 from src.database.models import User
 from src.auth.schemas import *
-from src.database import get_db
 from src.config import config
 
 # Password hashing context

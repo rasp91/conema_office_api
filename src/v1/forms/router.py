@@ -1,20 +1,13 @@
-import base64
-import re
-import os
-from pathlib import Path
-from uuid import uuid4
-
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, Session
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
-from src.v1.forms.schemas import FormResponseModel, FormCreateModel, UserModel, FormModel
+from src.v1.forms.schemas import FormResponseModel, FormCreateModel, FormModel
 from src.database.models import Form
 from src.auth.schemas import AuthUser
 from src.database import get_db
 from src.logger import logger
-from src.config import config
 from src.auth import get_admin_user
 
 router = APIRouter()
