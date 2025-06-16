@@ -7,8 +7,8 @@ services:
         ports:
             - "8005:8005"
         volumes:
-            - /volume1/docker/fastapi_roechling_office/global.log:/app/global.log
-            - /volume1/docker/fastapi_roechling_office/.env:/app/.env
-            - /volume1/docker/fastapi_roechling_office/data:/app/data
+            - /volume1/docker/roechling_office_fastapi_app/global.log:/app/global.log
+            - /volume1/docker/roechling_office_fastapi_app/.env:/app/.env
+            - /volume1/docker/roechling_office_fastapi_app/data:/app/data
         environment:
             - TZ=Europe/Prague
