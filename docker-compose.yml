@@ -1,8 +1,8 @@
 version: '3.9'
 services:
     fastapi_roechling:
-        image: fastapi-roechling-office:latest
-        container_name: fastapi-roechling-office-container
+        image: roechling-office-fastapi-app:latest
+        container_name: roechling-office-fastapi-app-container
         restart: always
         ports:
             - "8005:8005"

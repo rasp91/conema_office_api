@@ -19,5 +19,5 @@
 
 ## Deploy
 ```sh
-    sudo docker build --no-cache -t fastapi-roechling-office:latest .
+    sudo docker build --no-cache -t roechling-office-fastapi-app:latest .
 ```
