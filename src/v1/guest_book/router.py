@@ -42,7 +42,7 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
         guest_entry = GuestBook(
             first_name=data.name,
             last_name=data.surname,
-            company=data.company,
+            company=data.company.name,
             phone=data.phone,
             email=data.email,
             pdf_file=pdf_bytes,
@@ -51,9 +51,9 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
         db.commit()
 
         # Create a new company if it does not exist
-        company = db.execute(select(Company).where(Company.name == data.company)).scalar_one_or_none()
+        company = db.execute(select(Company).where(Company.name == data.company.name)).scalar_one_or_none()
         if not company:
-            company = Company(name=data.company)
+            company = Company(name=data.company.name)
             db.add(company)
             db.commit()
 
