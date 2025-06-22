@@ -7,7 +7,7 @@ from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.v1.guest_book.schemas import CompaniesResponseModel, RegisterResponseModel, RegisterModel
 from src.v1.guest_book.form import generate_form
-from src.database.models import GuestBook, Form
+from src.database.models import GuestBook, Company, Form
 from src.database import get_db
 from src.logger import logger
 
@@ -45,11 +45,17 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
             company=data.company,
             phone=data.phone,
             email=data.email,
-            password="ss",
             pdf_file=pdf_bytes,
         )
         db.add(guest_entry)
         db.commit()
+
+        # Create a new company if it does not exist
+        company = db.execute(select(Company).where(Company.name == data.company)).scalar_one_or_none()
+        if not company:
+            company = Company(name=data.company)
+            db.add(company)
+            db.commit()
 
         # Return the PDF as a response
         return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": "inline; filename=generated.pdf"})
@@ -70,7 +76,7 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
 def get_companies(db: Session = Depends(get_db)) -> None:
     try:
         # Return all companies from the database
-        return []
+        return db.execute(select(Company).order_by(Company.name.asc())).scalars().all()
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with fetching companies data.")
