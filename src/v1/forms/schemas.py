@@ -29,5 +29,5 @@ class FormCreateModel(BaseModel):
     content: str
 
 
-class FormResponseModel(BaseModel):
+class ResponseModel(BaseModel):
     success: bool = True

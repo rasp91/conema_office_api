@@ -128,7 +128,7 @@ def generate_form(data: RegisterModel, form_data: str) -> io.BytesIO:
         last_name_label=get_field_label("last_name", data.locate),
         last_name=data.surname,
         company_label=get_field_label("company", data.locate),
-        company=data.company.name,
+        company=data.company,
         phone_label=get_field_label("phone", data.locate),
         phone=data.phone,
         email_label=get_field_label("email", data.locate),

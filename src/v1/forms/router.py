@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
-from src.v1.forms.schemas import FormResponseModel, FormCreateModel, FormModel
+from src.v1.forms.schemas import FormCreateModel, ResponseModel, FormModel
 from src.database.models import Form
 from src.auth.schemas import AuthUser
 from src.database import get_db
@@ -63,7 +63,7 @@ def get_forms(db: Session = Depends(get_db)) -> None:
     status_code=status.HTTP_200_OK,
     name="Create Form",
     dependencies=[Depends(get_admin_user)],
-    response_model=FormResponseModel,
+    response_model=ResponseModel,
 )
 def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_admin_user)) -> None:
     try:
@@ -97,7 +97,7 @@ def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: Auth
     status_code=status.HTTP_200_OK,
     name="Edit Form",
     dependencies=[Depends(get_admin_user)],
-    response_model=FormResponseModel,
+    response_model=ResponseModel,
 )
 def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_admin_user)) -> None:
     try:
@@ -116,3 +116,26 @@ def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with guest registration.")
+
+
+@router.delete(
+    "/delete-form/{form_id}",
+    status_code=status.HTTP_200_OK,
+    name="Delete Form",
+    dependencies=[Depends(get_admin_user)],
+    response_model=ResponseModel,
+)
+def delete_form(form_id: int, db: Session = Depends(get_db)) -> None:
+    try:
+        form = db.execute(select(Form).where(Form.id == form_id)).scalar_one_or_none()
+        if not form:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form not found.")
+        db.delete(form)
+        db.commit()
+        # Return response
+        return {}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="There is a problem with deleting the form.")

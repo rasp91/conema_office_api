@@ -1,8 +1,16 @@
+import datetime
+
 from pydantic import BaseModel, EmailStr
 
 
-class CompaniesResponseModel(BaseModel):
-    name: str
+class GuestBookModel(BaseModel):
+    id: int
+    created_at: datetime.datetime
+    first_name: str
+    last_name: str
+    company: str
+    phone: str
+    email: EmailStr
 
     # Pydantic configuration for datetime serialization
     class Config:
@@ -14,7 +22,7 @@ class RegisterModel(BaseModel):
     surname: str
     acknowledged: bool = True
     gdpr: bool = False
-    company: CompaniesResponseModel
+    company: str
     phone: str
     email: EmailStr | str
     signature: str
@@ -22,5 +30,5 @@ class RegisterModel(BaseModel):
     header: str
 
 
-class RegisterResponseModel(BaseModel):
+class ResponseModel(BaseModel):
     success: bool = True
