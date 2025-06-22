@@ -1,15 +1,15 @@
-import base64
 import re
-from pathlib import Path
-from uuid import uuid4
 
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.v1.guest_book.schemas import CompaniesResponseModel, RegisterResponseModel, RegisterModel
+from src.v1.guest_book.form import generate_form
+from src.database.models import GuestBook, Form
 from src.database import get_db
 from src.logger import logger
-from src.config import config
 
 router = APIRouter()
 
@@ -23,35 +23,36 @@ router = APIRouter()
 def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
     try:
         # Validate signature
-        # Extract base64 part
         match = re.match(r"^data:image/.+;base64,(.+)$", data.signature)
         if not match:
-            raise HTTPException(status_code=400, detail="Invalid signature image format.")
+            return JSONResponse(status_code=400, content={"detail": "Invalid signature image format."})
 
-        # Decode base64 image data
-        signature_data = base64.b64decode(match.group(1))
-
-        # Save to file
-        path = Path(config.DATA_PATH) / "guest_book"
-        path.mkdir(exist_ok=True)
-        signature_filename = path / f"{uuid4()}.png"
-        with open(signature_filename, "wb") as fh:
-            fh.write(signature_data)
+        # Get Form
+        form_name = str(data.locate).strip().lower()
+        form_data = db.execute(select(Form).where(Form.name == form_name)).scalar_one_or_none()
+        if not form_data:
+            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": f"Form with name '{form_name}' not found."})
 
         # Generate PDF file
-        # report = generate_report(data, signature_filename)
-        # report.seek(0)
-        # print(f"Report generated successfully!")
-        # report_content = report.read()
-        # filename = f"report_{order_data.production_order_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        report = generate_form(data, form_data.content)
+        report.seek(0)
+        pdf_bytes = report.getvalue()
 
-        # Remove the signature file after PDF generation
-        # if signature_filename.exists():
-        #     print(f"Signature file {signature_filename} created successfully.")
-        #     signature_filename.unlink()
+        # Save data to the database
+        guest_entry = GuestBook(
+            first_name=data.name,
+            last_name=data.surname,
+            company=data.company,
+            phone=data.phone,
+            email=data.email,
+            password="ss",
+            pdf_file=pdf_bytes,
+        )
+        db.add(guest_entry)
+        db.commit()
 
-        # Return all companies from the database
-        return {}
+        # Return the PDF as a response
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": "inline; filename=generated.pdf"})
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with guest registration.")

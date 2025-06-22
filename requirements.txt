@@ -11,3 +11,5 @@ bcrypt
 pytz
 requests
 pydantic[email]
+weasyprint
+jinja2

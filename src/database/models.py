@@ -79,12 +79,11 @@ class GuestBook(Base):
 
     id = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
-    first_name = Column(String(255), unique=True, nullable=False)
+    first_name = Column(String(255), nullable=False)
     last_name = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=False)
     email = Column(String(255), nullable=False)
-    password = Column(String(255), nullable=False)
     pdf_file = Column(LargeBinary, nullable=False)
 
     def to_dict(self):
@@ -124,11 +123,3 @@ def create_default_admin_user(session, username="admin", password=config.DATABAS
     session.add(admin_user)
     session.commit()
     return True
-
-
-# Table Actions
-# print("Dropping all tables...")
-# drop_all_tables()
-# print("Creating all tables...")
-# create_all_tables()
-# print("All tables created successfully.")

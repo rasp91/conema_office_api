@@ -13,10 +13,13 @@ class RegisterModel(BaseModel):
     name: str
     surname: str
     acknowledged: bool = True
+    gdpr: bool = False
     company: CompaniesResponseModel
     phone: str
     email: EmailStr | str
     signature: str
+    locate: str
+    header: str
 
 
 class RegisterResponseModel(BaseModel):

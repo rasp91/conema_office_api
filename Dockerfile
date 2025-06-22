@@ -4,6 +4,24 @@ FROM python:3.11-slim
 # Set the working directory inside the container
 WORKDIR /app
 
+# Install system dependencies for WeasyPrint
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    libcairo2 \
+    libxml2 \
+    libxslt1.1 \
+    libjpeg-dev \
+    zlib1g \
+    curl \
+    fonts-liberation \
+    fonts-dejavu \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the requirements file first to leverage Docker cache
 COPY requirements.txt .
 
