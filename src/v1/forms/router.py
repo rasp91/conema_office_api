@@ -2,7 +2,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
-
+from fastapi.responses import JSONResponse
 from src.v1.forms.schemas import FormResponseModel, FormCreateModel, FormModel
 from src.database.models import Form
 from src.auth.schemas import AuthUser
@@ -19,12 +19,19 @@ router = APIRouter()
     name="Get Form",
     response_model=FormModel,
 )
-def get_form(locate: str, db: Session = Depends(get_db)) -> None:
+def get_form(locate: str, gdpr: bool = False, db: Session = Depends(get_db)) -> None:
     try:
+        # Form Conditions
+        form_name = str(locate).strip().lower()
+        if gdpr:
+            form_name = f"{locate}_gdpr"
         # Get all forms from the database
-        form_data = db.execute(select(Form).where(Form.name == locate).options(joinedload(Form.updater))).scalar_one_or_none()
+        form_data = db.execute(select(Form).where(Form.name == form_name).options(joinedload(Form.updater))).scalar_one_or_none()
         if not form_data:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Form with name '{locate}' not found.")
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={"detail": f"Form with name '{form_name}' not found."},
+            )
         # Return the form data
         return form_data
     except Exception as e:
