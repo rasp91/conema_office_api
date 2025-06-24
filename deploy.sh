@@ -12,7 +12,7 @@ git pull
 
 # Build Docker image
 echo "Building Docker image..."
-sudo docker build --no-cache -t roechling-office-fastapi-app:latest .
+docker build --no-cache -t roechling-office-fastapi-app:latest .
 
 # Build completed
 echo "Deployment complete."
