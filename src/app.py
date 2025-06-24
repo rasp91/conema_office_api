@@ -40,7 +40,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Routers
 from src.v1.guest_book.router import router as guest_book_router
-from src.v1.companies.router import router as companies_router
 from src.v1.database.router import router as database_router
 from src.v1.forms.router import router as forms_router
 from src.auth.router import router as auth_router
@@ -53,5 +52,3 @@ app.include_router(database_router, prefix="/v1/database", tags=["Database"], de
 app.include_router(guest_book_router, prefix="/v1/guest-book", tags=["Guest Book"], dependencies=[Depends(verify_api_key)])
 # Forms router
 app.include_router(forms_router, prefix="/v1/forms", tags=["Forms"], dependencies=[Depends(verify_api_key)])
-# Companies router
-app.include_router(companies_router, prefix="/v1/companies", tags=["Companies"], dependencies=[Depends(verify_api_key)])

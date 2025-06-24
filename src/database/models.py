@@ -44,15 +44,6 @@ class Variable(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-# Companies table definition
-class Company(Base):
-    __tablename__ = "companies"
-
-    id = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
-    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
-    name = Column(String(255), unique=True, nullable=False)
-
-
 # Forms table definition
 class Form(Base):
     __tablename__ = "forms"

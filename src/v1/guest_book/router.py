@@ -9,7 +9,7 @@ from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.v1.guest_book.schemas import *
 from src.v1.guest_book.form import generate_form
-from src.database.models import GuestBook, Company, Form
+from src.database.models import GuestBook,  Form
 from src.database import get_db
 from src.logger import logger
 from src.auth import get_admin_user
@@ -52,13 +52,6 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
         )
         db.add(guest_entry)
         db.commit()
-
-        # Create a new company if it does not exist
-        company = db.execute(select(Company).where(Company.name == data.company)).scalar_one_or_none()
-        if not company:
-            company = Company(name=data.company)
-            db.add(company)
-            db.commit()
 
         # Return response
         return {}
