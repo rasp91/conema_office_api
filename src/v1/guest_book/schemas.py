@@ -10,11 +10,7 @@ class GuestBookModel(BaseModel):
     last_name: str
     company: str
     phone: str
-    email: EmailStr
-
-    # Pydantic configuration for datetime serialization
-    class Config:
-        from_attributes = True  # Allows ORM conversion
+    email: EmailStr | None
 
 
 class RegisterModel(BaseModel):

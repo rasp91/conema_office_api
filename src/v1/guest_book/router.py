@@ -9,7 +9,7 @@ from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.v1.guest_book.schemas import *
 from src.v1.guest_book.form import generate_form
-from src.database.models import GuestBook,  Form
+from src.database.models import GuestBook, Form
 from src.database import get_db
 from src.logger import logger
 from src.auth import get_admin_user
@@ -47,7 +47,7 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
             last_name=data.surname,
             company=data.company,
             phone=data.phone,
-            email=data.email,
+            email=data.email if data.email and len(data.email) > 0 else None,
             pdf_file=pdf_bytes,
         )
         db.add(guest_entry)

@@ -74,7 +74,7 @@ class GuestBook(Base):
     last_name = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=False)
-    email = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=True)
     pdf_file = Column(LargeBinary, nullable=False)
 
     def to_dict(self):
