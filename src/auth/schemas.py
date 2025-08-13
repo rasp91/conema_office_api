@@ -2,6 +2,14 @@ import datetime
 
 from pydantic import field_validator, BaseModel, EmailStr, Field
 
+USERNAME_PATTERN = r"^[a-z]+(?:[.]+)?(?:[a-z1-9]+)?$"
+USERNAME_MIN_LENGTH = 4
+USERNAME_MAX_LENGTH = 20
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 32
+FIRST_NAME_MIN_LENGTH = LAST_NAME_MIN_LENGTH = 2
+FIRST_NAME_MAX_LENGTH = LAST_NAME_MAX_LENGTH = 255
+
 
 class AuthLoginResponse(BaseModel):
     success: bool = False
@@ -16,16 +24,28 @@ class AuthUserResponseModel(BaseModel):
 
 
 class AuthRegisterModel(BaseModel):
-    username: str = Field(..., min_length=4, description="Username")
-    password: str = Field(..., min_length=6, description="Current password")
+    username: str = Field(..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username")
+    password: str = Field(..., min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH, description="Current password")
+    confirm_password: str = Field(..., description="Must match new_password")
     email: EmailStr = Field(..., description="Valid email address is required")
-    first_name: str = Field(..., min_length=3, description="First name")
-    last_name: str = Field(..., min_length=3, description="Last name")
+    first_name: str = Field(..., min_length=FIRST_NAME_MIN_LENGTH, max_length=FIRST_NAME_MAX_LENGTH, description="First name")
+    last_name: str = Field(..., min_length=LAST_NAME_MIN_LENGTH, max_length=LAST_NAME_MAX_LENGTH, description="Last name")
+
+    @field_validator("confirm_password")
+    def passwords_match(cls, confirm_password, values):
+        if "password" in values.data and confirm_password != values.data["password"]:
+            raise ValueError("Password and confirm password must match")
+        return confirm_password
 
 
 class AuthChangePasswordModel(BaseModel):
-    old_password: str = Field(..., min_length=6, description="Current password")
-    new_password: str = Field(..., min_length=6, description="New password, at least 6 characters")
+    old_password: str = Field(..., min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH, description="Current password")
+    new_password: str = Field(
+        ...,
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="New password, at least 8 characters and max 32 characters",
+    )
     confirm_password: str = Field(..., description="Must match new_password")
 
     @field_validator("confirm_password")
@@ -33,25 +53,17 @@ class AuthChangePasswordModel(BaseModel):
         if "new_password" in values.data and confirm_password != values.data["new_password"]:
             raise ValueError("New password and confirm password must match")
         return confirm_password
+
+
+class AuthResetPasswordModel(AuthChangePasswordModel):
+    pass
 
 
 class AuthEditUserModel(BaseModel):
-    username: str = Field(..., min_length=4, description="Username")
+    username: str = Field(..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username")
     email: EmailStr = Field(..., description="Valid email address is required")
-    first_name: str = Field(..., min_length=3, description="First name")
-    last_name: str = Field(..., min_length=3, description="Last name")
-
-
-class AuthResetPasswordModel(BaseModel):
-    username: str = Field(..., min_length=4, description="Username")
-    new_password: str = Field(..., min_length=6, description="New password, at least 6 characters")
-    confirm_password: str = Field(..., description="Must match new_password")
-
-    @field_validator("confirm_password")
-    def passwords_match(cls, confirm_password, values):
-        if "new_password" in values.data and confirm_password != values.data["new_password"]:
-            raise ValueError("New password and confirm password must match")
-        return confirm_password
+    first_name: str = Field(..., min_length=FIRST_NAME_MIN_LENGTH, max_length=FIRST_NAME_MAX_LENGTH, description="First name")
+    last_name: str = Field(..., min_length=LAST_NAME_MIN_LENGTH, max_length=LAST_NAME_MAX_LENGTH, description="Last name")
 
 
 class AuthUserListResponseModel(BaseModel):
