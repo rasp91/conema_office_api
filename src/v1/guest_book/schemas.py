@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class GuestBookModel(BaseModel):
@@ -14,12 +14,12 @@ class GuestBookModel(BaseModel):
 
 
 class RegisterModel(BaseModel):
-    name: str
-    surname: str
-    acknowledged: bool = True
+    name: str = Field(..., min_length=3, description="Name")
+    surname: str = Field(..., min_length=3, description="Surname")
+    acknowledged: bool = False
     gdpr: bool = False
     company: str
-    phone: str
+    phone: str = Field(..., pattern=r'^(\+\d{1,3}\s?)?\d{3,12}$', description="Phone number")
     email: EmailStr | str
     signature: str
     locate: str
