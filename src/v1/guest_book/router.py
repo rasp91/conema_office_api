@@ -12,7 +12,7 @@ from src.v1.guest_book.form import generate_form
 from src.database.models import GuestBook, Form
 from src.database import get_db
 from src.logger import logger
-from src.auth import get_admin_user
+from src.auth import get_auth_user
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
     "/get-guest-book",
     status_code=status.HTTP_200_OK,
     name="Get Guest Book",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[GuestBookModel],
 )
 def get_guest_book(db: Session = Depends(get_db)) -> None:
@@ -82,7 +82,7 @@ def get_guest_book(db: Session = Depends(get_db)) -> None:
     "/download-form/{guest_book_id}",
     status_code=status.HTTP_200_OK,
     name="Download Guest Book Form",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
 )
 def download_report(guest_book_id: int, db: Session = Depends(get_db)):
     def remove_diacritics(text: str) -> str:

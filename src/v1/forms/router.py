@@ -9,7 +9,7 @@ from src.database.models import Form
 from src.auth.schemas import AuthUser
 from src.database import get_db
 from src.logger import logger
-from src.auth import get_admin_user
+from src.auth import get_auth_user
 
 router = APIRouter()
 
@@ -44,7 +44,7 @@ def get_form(locate: str, gdpr: bool = False, db: Session = Depends(get_db)) -> 
     "/get-forms",
     status_code=status.HTTP_200_OK,
     name="Get Forms",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[FormModel],
 )
 def get_forms(db: Session = Depends(get_db)) -> None:
@@ -62,10 +62,10 @@ def get_forms(db: Session = Depends(get_db)) -> None:
     "/create",
     status_code=status.HTTP_200_OK,
     name="Create Form",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=ResponseModel,
 )
-def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_admin_user)) -> None:
+def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_auth_user)) -> None:
     try:
         # Variables
         form_name = str(data.name).strip().lower()
@@ -96,10 +96,10 @@ def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: Auth
     "/edit/{form_id}",
     status_code=status.HTTP_200_OK,
     name="Edit Form",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=ResponseModel,
 )
-def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_admin_user)) -> None:
+def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db), user: AuthUser = Depends(get_auth_user)) -> None:
     try:
         # Fetch the order to ensure it exists
         form = db.execute(select(Form).where(Form.id == form_id)).scalar_one_or_none()
@@ -122,7 +122,7 @@ def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db)
     "/delete-form/{form_id}",
     status_code=status.HTTP_200_OK,
     name="Delete Form",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=ResponseModel,
 )
 def delete_form(form_id: int, db: Session = Depends(get_db)) -> None:
