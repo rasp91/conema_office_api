@@ -9,7 +9,7 @@ from sqlalchemy import select, and_
 from fastapi import status, HTTPException, APIRouter, Depends, Header
 from jose import jwt, JWTError
 
-from src.database.models import User
+from src.database.models.users import User
 from src.auth.schemas import *
 from src.config import config
 

@@ -4,11 +4,11 @@ from sqlalchemy.orm import joinedload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
+from src.database.models.forms import Form
 from src.v1.forms.schemas import FormCreateModel, ResponseModel, FormModel
-from src.database.models import Form
 from src.auth.schemas import AuthUser
 from src.database import get_db
-from src.logger import logger
+from src.logger import app_logger
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def get_form(locate: str, gdpr: bool = False, db: Session = Depends(get_db)) -> 
         # Return the form data
         return form_data
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with fetching form data.")
 
 
@@ -54,7 +54,7 @@ def get_forms(db: Session = Depends(get_db)) -> None:
         # Use Pydantic to convert ORM objects to dicts
         return forms_data
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with fetching forms data.")
 
 
@@ -88,7 +88,7 @@ def create_form(data: FormCreateModel, db: Session = Depends(get_db), user: Auth
         # Return the created form
         return {}
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with creating new form.")
 
 
@@ -114,7 +114,7 @@ def edit_form(form_id: int, data: FormCreateModel, db: Session = Depends(get_db)
         # Return all companies from the database
         return {}
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with guest registration.")
 
 
@@ -137,5 +137,5 @@ def delete_form(form_id: int, db: Session = Depends(get_db)) -> None:
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="There is a problem with deleting the form.")

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
-from src.database.models import User
+from src.database.models.users import User
 from src.auth.schemas import (
     AuthUserListResponseModel,
     AuthChangePasswordModel,
@@ -60,7 +60,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         expires_delta=access_token_expires,
     )
     # Return Token
-    return {"success": True, "access_token": access_token}
+    return {"success": True, "access_token": access_token, "user": await get_auth_user(token=access_token)}
 
 
 @router.get(

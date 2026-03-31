@@ -7,11 +7,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
+from src.database.models.guest_books import GuestBook
 from src.v1.guest_book.schemas import *
+from src.database.models.forms import Form
 from src.v1.guest_book.form import generate_form
-from src.database.models import GuestBook, Form
 from src.database import get_db
-from src.logger import logger
+from src.logger import app_logger
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -56,7 +57,7 @@ def register(data: RegisterModel, db: Session = Depends(get_db)) -> None:
         # Return response
         return {}
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with guest registration.")
 
 
@@ -74,7 +75,7 @@ def get_guest_book(db: Session = Depends(get_db)) -> None:
         # Use Pydantic to convert ORM objects to dicts
         return guest_book_data
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with fetching guest book data.")
 
 
@@ -117,7 +118,7 @@ def download_report(guest_book_id: int, db: Session = Depends(get_db)):
             headers=headers,
         )
     except Exception as e:
-        logger.exception(e)
+        app_logger.exception(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"There is a problem with downloading guest form [{e}]."
         )

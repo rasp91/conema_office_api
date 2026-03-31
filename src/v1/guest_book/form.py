@@ -1,7 +1,11 @@
+import sys
 import re
 import io
 
-from weasyprint import HTML
+# WeasyPrint is not supported on Windows, so we conditionally import it only on non-Windows platforms
+if sys.platform != "win32":
+    from weasyprint import HTML
+
 from jinja2 import Template
 
 from src.v1.guest_book.schemas import RegisterModel
@@ -200,4 +204,5 @@ def get_field_label(field_key: str, locale: str = "cs") -> str:
         },
     }
 
+    return labels.get(field_key, {}).get(locale, field_key)
     return labels.get(field_key, {}).get(locale, field_key)

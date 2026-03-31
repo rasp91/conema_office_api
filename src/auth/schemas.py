@@ -11,10 +11,21 @@ FIRST_NAME_MIN_LENGTH = LAST_NAME_MIN_LENGTH = 2
 FIRST_NAME_MAX_LENGTH = LAST_NAME_MAX_LENGTH = 255
 
 
+class AuthUser(BaseModel):
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    email: EmailStr
+    is_admin: bool
+    exp: int
+
+
 class AuthLoginResponse(BaseModel):
     success: bool = False
     access_token: str | None = None
     error: str = ""
+    user: AuthUser | None = None
 
 
 class AuthUserResponseModel(BaseModel):
@@ -24,7 +35,9 @@ class AuthUserResponseModel(BaseModel):
 
 
 class AuthRegisterModel(BaseModel):
-    username: str = Field(..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username")
+    username: str = Field(
+        ..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username"
+    )
     password: str = Field(..., min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH, description="Current password")
     confirm_password: str = Field(..., description="Must match new_password")
     email: EmailStr = Field(..., description="Valid email address is required")
@@ -60,7 +73,9 @@ class AuthResetPasswordModel(AuthChangePasswordModel):
 
 
 class AuthEditUserModel(BaseModel):
-    username: str = Field(..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username")
+    username: str = Field(
+        ..., pattern=USERNAME_PATTERN, min_length=USERNAME_MIN_LENGTH, max_length=USERNAME_MAX_LENGTH, description="Username"
+    )
     email: EmailStr = Field(..., description="Valid email address is required")
     first_name: str = Field(..., min_length=FIRST_NAME_MIN_LENGTH, max_length=FIRST_NAME_MAX_LENGTH, description="First name")
     last_name: str = Field(..., min_length=LAST_NAME_MIN_LENGTH, max_length=LAST_NAME_MAX_LENGTH, description="Last name")
@@ -74,13 +89,3 @@ class AuthUserListResponseModel(BaseModel):
     last_login: datetime.datetime
     enabled: bool
     is_admin: bool
-
-
-class AuthUser(BaseModel):
-    id: int
-    username: str
-    first_name: str
-    last_name: str
-    email: EmailStr
-    is_admin: bool
-    exp: int
