@@ -5,3 +5,5 @@ venv*/
 .env
 global.log
 data/
+
+.claude
