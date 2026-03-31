@@ -1,6 +1,10 @@
+import importlib
+import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
+
+sys.stdout.reconfigure(encoding="utf-8")
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -9,7 +13,40 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.database import DATABASE_URL
-from src.database.models import Base
+from src.database.base import Base
+
+
+def import_all_models():
+    """Automatically import all model files to register them with Base"""
+    models_dir = Path(__file__).parent.parent / "src" / "database" / "models"
+
+    if not models_dir.exists():
+        print(f"⚠️  Models directory not found: {models_dir}")
+        return
+
+    imported_count = 0
+
+    for py_file in models_dir.rglob("*.py"):
+        if py_file.name.startswith("__") or py_file.name.startswith("."):
+            continue
+
+        relative_path = py_file.relative_to(models_dir.parent.parent.parent)
+        module_path = str(relative_path.with_suffix("")).replace(os.sep, ".")
+
+        try:
+            importlib.import_module(module_path)
+            imported_count += 1
+            print(f"✅ Imported model: {module_path}")
+        except ImportError as e:
+            print(f"⚠️  Could not import {module_path}: {e}")
+        except Exception as e:
+            print(f"❌ Error importing {module_path}: {e}")
+
+    print(f"📊 Successfully imported {imported_count} model files")
+    print(f"🏗️  Total tables registered: {len(Base.metadata.tables)}")
+
+
+import_all_models()
 
 # Alembic Config object — gives access to alembic.ini values
 config = context.config

@@ -6,6 +6,9 @@ A comprehensive database schema validation tool using Alembic.
 import logging
 import sys
 import os
+
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -190,7 +193,7 @@ class DatabaseValidator:
                     )
 
                 elif diff_type == "add_column":
-                    table_name, column = item[1], item[3]
+                    table_name, column = item[2], item[3]
                     differences.append(
                         SchemaDifference(
                             type="add_column",
@@ -201,7 +204,7 @@ class DatabaseValidator:
                     )
 
                 elif diff_type == "remove_column":
-                    table_name, column = item[1], item[3]
+                    table_name, column = item[2], item[3]
                     differences.append(
                         SchemaDifference(
                             type="remove_column",
@@ -212,7 +215,7 @@ class DatabaseValidator:
                     )
 
                 elif diff_type == "modify_type":
-                    table_name, column_name = item[1], item[2]
+                    table_name, column_name = item[2], item[3]
                     existing_type, new_type = item[5], item[6]
                     differences.append(
                         SchemaDifference(
@@ -224,7 +227,7 @@ class DatabaseValidator:
                     )
 
                 elif diff_type == "modify_nullable":
-                    table_name, column_name = item[1], item[2]
+                    table_name, column_name = item[2], item[3]
                     existing_nullable, new_nullable = item[5], item[6]
                     differences.append(
                         SchemaDifference(
