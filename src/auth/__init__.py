@@ -97,8 +97,3 @@ async def get_optional_auth_user(token: Optional[str] = Depends(optional_oauth2)
 def verify_api_key(api_key: str = Header(..., alias="API-KEY")):
     if api_key != config.API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
-
-
-def verify_db_key(api_key: str = Header(..., alias="DB-KEY")):
-    if api_key != config.DATABASE_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API Key")

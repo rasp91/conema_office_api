@@ -1,36 +1,45 @@
 import logging
+import os
 import sys
+from logging.handlers import TimedRotatingFileHandler
 
 from src.config import config
 
-# Create a custom logger
-logger = logging.getLogger("roechling_office_api")
-logger.setLevel(logging.DEBUG)
+# Ensure logs directory exists before any handler tries to open a file
+os.makedirs(config.LOGS_PATH, exist_ok=True)
 
-# Prevent duplicate logs by clearing existing handlers
-if logger.handlers:
-    logger.handlers.clear()
-
-# Create formatters
-console_formatter = logging.Formatter(fmt="%(asctime)s | %(name)s | %(levelname)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-
-file_formatter = logging.Formatter(
-    fmt="%(asctime)s | %(name)s | %(levelname)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+# Formatters
+CONSOLE_FORMATTER = logging.Formatter(
+    fmt="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+FILE_FORMATTER = logging.Formatter(
+    fmt="%(asctime)s | %(name)s | %(levelname)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# Create console handler
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(console_formatter)
+# --- Root logger → global.log (catches all loggers including third-party) ---
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+if not root_logger.handlers:
+    global_handler = logging.FileHandler(config.GLOBAL_LOG_PATH, encoding="utf-8")
+    global_handler.setFormatter(FILE_FORMATTER)
+    root_logger.addHandler(global_handler)
 
-# Create file handler
-file_handler = logging.FileHandler(config.LOG_PATH, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(file_formatter)
+# --- App logger → app.YYYYMMDD.log + console ---
+app_logger = logging.getLogger("roechling_office_api")
+app_logger.setLevel(logging.INFO)
 
-# Add handlers to logger
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+if not app_logger.handlers:
+    # Rotating file handler: daily rotation, 5 backups, pattern: app.20250131.log
+    file_handler = TimedRotatingFileHandler(
+        config.APP_LOG_PATH, when="midnight", interval=1, backupCount=5, encoding="utf-8"
+    )
+    file_handler.suffix = "%Y%m%d.log"
+    file_handler.setFormatter(FILE_FORMATTER)
+    app_logger.addHandler(file_handler)
 
-# Prevent propagation to root logger to avoid duplicate logs
-logger.propagate = False
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(CONSOLE_FORMATTER)
+    app_logger.addHandler(console_handler)

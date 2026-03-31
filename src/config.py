@@ -18,13 +18,15 @@ class Config(BaseSettings):
     DATABASE_NAME: str
     DATABASE_USER: str
     DATABASE_SECRET: str
-    DATABASE_KEY: str
-    DATABASE_DEFAULT_PASSWORD: str
+
+    # Paths
+    ROOT_PATH: str
+    LOGS_PATH: str = ""
+    DATA_PATH: str = ""
 
     # Logs
-    ROOT_PATH: str
-    LOG_PATH: str = ""
-    DATA_PATH: str = ""
+    GLOBAL_LOG_PATH: str = ""
+    APP_LOG_PATH: str = ""
 
     # JWT
     JWT_SECRET_KEY: str
@@ -33,12 +35,17 @@ class Config(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_DAYS: int
 
     def init(self):
-        self.LOG_PATH = os.path.join(self.ROOT_PATH, "global.log")
-        self.DATA_PATH = os.path.join(self.DATA_PATH, "data")
+        # Paths
+        self.LOGS_PATH = os.path.join(self.ROOT_PATH, "logs")
+        self.DATA_PATH = os.path.join(self.ROOT_PATH, "data")
 
-        # Init Data Path
-        if not os.path.exists(self.DATA_PATH):
-            os.makedirs(self.DATA_PATH)
+        # Logs
+        self.GLOBAL_LOG_PATH = os.path.join(self.LOGS_PATH, "global.log")
+        self.APP_LOG_PATH = os.path.join(self.LOGS_PATH, "app.log")
+
+        # Init Paths
+        os.makedirs(self.LOGS_PATH, exist_ok=True)
+        os.makedirs(self.DATA_PATH, exist_ok=True)
 
 
 config = Config()
