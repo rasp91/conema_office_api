@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import computed_field, BaseModel, EmailStr
 
 
 class UserModel(BaseModel):
@@ -6,4 +6,10 @@ class UserModel(BaseModel):
     username: str
     first_name: str
     last_name: str
-    email: EmailStr
+    email: EmailStr | None
+    role_id: int | None
+
+    @computed_field
+    @property
+    def full_name(self) -> str:
+        return f"{str(self.first_name).strip()} {str(self.last_name).strip()}".replace("  ", " ").strip()

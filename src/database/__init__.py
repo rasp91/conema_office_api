@@ -12,7 +12,13 @@ DATABASE_URL = (
 )
 
 # Create Engine
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,  # FIX dead connections
+    pool_recycle=1800,  # FIX MySQL idle timeout (30 min)
+    # pool_size=10,
+    # max_overflow=20,
+)
 
 # Create Session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
