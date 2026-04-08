@@ -46,6 +46,9 @@ class Config(BaseSettings):
         # Init Paths
         os.makedirs(self.LOGS_PATH, exist_ok=True)
         os.makedirs(self.DATA_PATH, exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "news", "thumbnails"), exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "news", "images"), exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "news", "files"), exist_ok=True)
 
 
 config = Config()

@@ -27,7 +27,8 @@ Röchling Office API — a REST API for managing guest registration with PDF for
 | `src/database/` | SQLAlchemy engine, session factory (`get_db`), Base class, ORM models |
 | `src/v1/forms/` | Form template CRUD (HTML/Jinja2 content stored as LONGTEXT) |
 | `src/v1/guest_book/` | Guest registration endpoints + PDF generation (`form.py`) |
-| `src/v1/database/` | Admin-only database rebuild endpoint |
+| `src/upload/` | Generic file/image upload endpoints — saves to `data/`, returns relative path |
+| `src/kiosk/news/` | Kiosk news CRUD + document (image/file) management |
 | `alembic/` | Migration scripts; `env.py` wires `DATABASE_URL` + `Base.metadata` |
 
 ## Essential Commands
@@ -111,6 +112,46 @@ Before every commit or push, perform a peer review:
 - Flag potential issues (bugs, type errors, missing edge cases)
 - Suggest improvements if any
 - After the review, **wait for the user to confirm** before committing or pushing
+
+## Endpoint Module Structure
+
+Every new endpoint module **must** follow this two-file layout:
+
+```
+src/<namespace>/<resource>/
+├── __init__.py
+├── router.py     # all route handlers for this resource
+└── schemas.py    # all Pydantic request/response models used by this router
+```
+
+**Namespace conventions:**
+- `src/v1/` — original/shared endpoints for office purposes (`guest_book`, `forms`)
+- `src/upload/` — generic file/image upload endpoints (used by both admin and kiosk)
+- `src/kiosk/` — kiosk-specific endpoints (`news`, future: `events`, `materials`)
+
+### `router.py` rules
+- `router = APIRouter()` at the top
+- Import schemas only from the local `./schemas.py`
+- Import ORM models from `src/database/models/`
+- Import auth/db dependencies from `src/auth/` and `src/database/`
+
+### `schemas.py` rules
+- **All** Pydantic models used by this router live here — no inline schemas in `router.py`
+- Naming convention:
+  - `XxxModel` — ORM response model (`Config.from_attributes = True`)
+  - `XxxCreateModel` — input for POST
+  - `XxxUpdateModel` — input for PUT (all fields optional for partial updates)
+  - `ResponseModel(success: bool = True)` — for mutations with no return body
+- Use Python 3.10+ union syntax: `str | None = None`
+
+### `app.py` registration
+```python
+from src.<namespace>.<resource>.router import router as <resource>_router
+app.include_router(<resource>_router, prefix="/<resource>", tags=["Resource"], dependencies=[Depends(verify_api_key)])
+```
+
+### Additional files (only when justified)
+Add extra files (e.g. `form.py`, `report.py`) only for significant business logic that does not belong in a route handler — such as PDF generation in `guest_book`. Do **not** add `services.py` or `utils.py` by default.
 
 ## Additional Documentation
 

@@ -1,8 +1,10 @@
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from fastapi.responses import JSONResponse
 from fastapi import status, FastAPI, Depends
 
+from src.config import config
 from src.auth import verify_api_key
 
 app = FastAPI(
@@ -38,14 +40,34 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# Static files (images, documents)
+app.mount("/static", StaticFiles(directory=config.DATA_PATH), name="static")
+
 # Routers
 from src.v1.guest_book.router import router as guest_book_router
+from src.kiosk.news.router import router as news_router
 from src.v1.forms.router import router as forms_router
+from src.upload.router import router as upload_router
 from src.auth.router import router as auth_router
 
+# ---------------------
+# Generic/shared routers
+# ---------------------
 # Auth router
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+# Upload router
+app.include_router(upload_router, prefix="/upload", tags=["Upload"], dependencies=[Depends(verify_api_key)])
+
+# ---------------------
+# Office-specific routers
+# ---------------------
 # Guest Book router
 app.include_router(guest_book_router, prefix="/v1/guest-book", tags=["Guest Book"], dependencies=[Depends(verify_api_key)])
 # Forms router
 app.include_router(forms_router, prefix="/v1/forms", tags=["Forms"], dependencies=[Depends(verify_api_key)])
+
+# ---------------------
+# Kiosk-specific routers
+# ---------------------
+# News router
+app.include_router(news_router, prefix="/kiosk/news", tags=["News"], dependencies=[Depends(verify_api_key)])
