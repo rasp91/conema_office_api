@@ -113,6 +113,22 @@ Before every commit or push, perform a peer review:
 - Suggest improvements if any
 - After the review, **wait for the user to confirm** before committing or pushing
 
+### Alembic Validation (before push)
+
+If any database models or migrations were changed, run the validator before pushing:
+
+```bash
+python alembic_validator.py
+```
+
+- If validation **passes** (`✅ No schema drift detected`) — proceed with push
+- If validation **fails** — fix the schema drift first:
+  1. `python -m alembic revision --autogenerate -m "description"`
+  2. Review the generated migration
+  3. `python -m alembic upgrade head`
+  4. Re-run `python alembic_validator.py` until clean
+- **Wait for user confirmation** before pushing even after a clean validation
+
 ## Endpoint Module Structure
 
 Every new endpoint module **must** follow this two-file layout:
