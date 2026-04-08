@@ -12,8 +12,8 @@ from src.kiosk.news.schemas import (
     ResponseModel,
     NewsItemModel,
 )
-from src.upload.router import delete_file
 from src.database import get_db
+from src.upload import delete_file
 from src.logger import app_logger
 from src.auth import get_auth_user
 
@@ -41,7 +41,9 @@ def get_news(db: Session = Depends(get_db)) -> list[NewsItem]:
                 .where(NewsItem.is_visible == True)  # noqa: E712
                 .options(selectinload(NewsItem.documents))
                 .order_by(NewsItem.published_at.desc())
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         return items
     except Exception as e:

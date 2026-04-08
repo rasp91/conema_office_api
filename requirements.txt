@@ -14,3 +14,4 @@ requests
 pydantic[email]
 weasyprint
 jinja2
+Pillow
