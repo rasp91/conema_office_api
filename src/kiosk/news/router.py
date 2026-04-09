@@ -51,6 +51,24 @@ def get_news(db: Session = Depends(get_db)) -> list[NewsItem]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch news.")
 
 
+@router.get(
+    "/all",
+    status_code=status.HTTP_200_OK,
+    name="Get All News",
+    dependencies=[Depends(get_auth_user)],
+    response_model=list[NewsItemModel],
+)
+def get_all_news(db: Session = Depends(get_db)) -> list[NewsItem]:
+    try:
+        items = (
+            db.execute(select(NewsItem).options(selectinload(NewsItem.documents)).order_by(NewsItem.published_at.desc())).scalars().all()
+        )
+        return items
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch news.")
+
+
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,

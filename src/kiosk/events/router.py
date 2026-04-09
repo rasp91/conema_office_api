@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from fastapi import status, HTTPException, APIRouter, Depends
 
-from src.auth import get_auth_user
-from src.database import get_db
 from src.database.models.kiosk_events import KioskEvent
+from src.kiosk.events.schemas import EventUpdateModel, EventCreateModel, ResponseModel, EventModel
 from src.kiosk.events import get_event_or_404
-from src.kiosk.events.schemas import EventCreateModel, EventModel, EventUpdateModel, ResponseModel
-from src.logger import app_logger
+from src.database import get_db
 from src.upload import delete_file
+from src.logger import app_logger
+from src.auth import get_auth_user
 
 router = APIRouter()
 
@@ -23,9 +23,7 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
     try:
         items = (
             db.execute(
-                select(KioskEvent)
-                .where(KioskEvent.is_visible == True)  # noqa: E712
-                .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
+                select(KioskEvent).where(KioskEvent.is_visible == True).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())  # noqa: E712
             )
             .scalars()
             .all()
@@ -45,13 +43,7 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
 )
 def get_all_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
     try:
-        items = (
-            db.execute(
-                select(KioskEvent).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
-            )
-            .scalars()
-            .all()
-        )
+        items = db.execute(select(KioskEvent).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())).scalars().all()
         return items
     except Exception as e:
         app_logger.exception(e)
