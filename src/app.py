@@ -45,6 +45,7 @@ app.mount("/static", StaticFiles(directory=config.DATA_PATH), name="static")
 
 # Routers
 from src.v1.guest_book.router import router as guest_book_router
+from src.kiosk.events.router import router as events_router
 from src.kiosk.news.router import router as news_router
 from src.v1.forms.router import router as forms_router
 from src.upload.router import router as upload_router
@@ -71,3 +72,5 @@ app.include_router(forms_router, prefix="/v1/forms", tags=["Forms"], dependencie
 # ---------------------
 # News router
 app.include_router(news_router, prefix="/kiosk/news", tags=["News"], dependencies=[Depends(verify_api_key)])
+# Events router
+app.include_router(events_router, prefix="/kiosk/events", tags=["Events"], dependencies=[Depends(verify_api_key)])
