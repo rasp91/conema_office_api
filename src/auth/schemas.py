@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic import field_validator, BaseModel, EmailStr, Field
+from pydantic import field_validator, computed_field, BaseModel, EmailStr, Field
 
 USERNAME_PATTERN = r"^[a-z]+(?:[.]+)?(?:[a-z1-9]+)?$"
 USERNAME_MIN_LENGTH = 4
@@ -19,6 +19,11 @@ class AuthUser(BaseModel):
     email: EmailStr
     is_admin: bool
     exp: int
+
+    @computed_field
+    @property
+    def full_name(self) -> str:
+        return f"{str(self.first_name).strip()} {str(self.last_name).strip()}".replace("  ", " ").strip()
 
 
 class AuthLoginResponse(BaseModel):
