@@ -7,8 +7,8 @@ sqlalchemy
 pymysql
 python-jose[cryptography]
 python-multipart
-passlib
-bcrypt
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
 pytz
 requests
 pydantic[email]
