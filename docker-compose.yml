@@ -10,5 +10,6 @@ services:
             - /volume1/docker/roechling_office_fastapi_app/global.log:/app/global.log
             - /volume1/docker/roechling_office_fastapi_app/.env:/app/.env
             - /volume1/docker/roechling_office_fastapi_app/data:/app/data
+            - /volume1/docker/roechling_office_fastapi_app/logs:/app/logs
         environment:
             - TZ=Europe/Prague

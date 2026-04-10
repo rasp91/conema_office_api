@@ -7,7 +7,6 @@ class UserModel(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr | None
-    role_id: int | None
 
     @computed_field
     @property
