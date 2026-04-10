@@ -9,7 +9,7 @@ from src.auth import verify_api_key
 
 app = FastAPI(
     title="Roechling FastAPI",
-    version="1.1.0",
+    version="1.1.1",
     description="A simple API to interact with the Roechling database.",
     docs_url="/docs",
 )
