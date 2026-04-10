@@ -5,11 +5,11 @@ services:
         container_name: roechling-office-fastapi-app-container
         restart: always
         ports:
-            - "8005:8005"
+            - "8805:80"
         volumes:
-            - /volume1/docker/roechling_office_fastapi_app/global.log:/app/global.log
-            - /volume1/docker/roechling_office_fastapi_app/.env:/app/.env
-            - /volume1/docker/roechling_office_fastapi_app/data:/app/data
-            - /volume1/docker/roechling_office_fastapi_app/logs:/app/logs
+            - /volume2/docker/roechling_office_fastapi_app/global.log:/app/global.log
+            - /volume2/docker/roechling_office_fastapi_app/.env:/app/.env
+            - /volume2/docker/roechling_office_fastapi_app/data:/app/data
+            - /volume2/docker/roechling_office_fastapi_app/logs:/app/logs
         environment:
             - TZ=Europe/Prague
