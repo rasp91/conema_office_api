@@ -44,6 +44,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.mount("/static", StaticFiles(directory=config.DATA_PATH), name="static")
 
 # Routers
+from src.kiosk.presentation_categories.router import router as presentation_categories_router
+from src.kiosk.presentations.router import router as presentations_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
 from src.kiosk.news.router import router as news_router
@@ -74,3 +76,12 @@ app.include_router(forms_router, prefix="/v1/forms", tags=["Forms"], dependencie
 app.include_router(news_router, prefix="/kiosk/news", tags=["News"], dependencies=[Depends(verify_api_key)])
 # Events router
 app.include_router(events_router, prefix="/kiosk/events", tags=["Events"], dependencies=[Depends(verify_api_key)])
+# Presentation categories router (must be registered before presentations to avoid /{id} conflict)
+app.include_router(
+    presentation_categories_router,
+    prefix="/kiosk/presentations/categories",
+    tags=["Presentation Categories"],
+    dependencies=[Depends(verify_api_key)],
+)
+# Presentations router
+app.include_router(presentations_router, prefix="/kiosk/presentations", tags=["Presentations"], dependencies=[Depends(verify_api_key)])
