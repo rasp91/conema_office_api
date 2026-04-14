@@ -21,6 +21,7 @@ class NewsItemModel(BaseModel):
     description: str
     thumbnail_path: str | None
     is_visible: bool
+    views: int = 0
     documents: list[NewsDocumentModel] = []
 
     class Config:

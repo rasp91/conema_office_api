@@ -1,9 +1,17 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
 
+from src.database.models.kiosk_event_documents import EventDocument
 from src.database.models.kiosk_events import KioskEvent
-from src.kiosk.events.schemas import EventUpdateModel, EventCreateModel, ResponseModel, EventModel
+from src.kiosk.events.schemas import (
+    EventDocumentCreateModel,
+    EventDocumentModel,
+    EventUpdateModel,
+    EventCreateModel,
+    ResponseModel,
+    EventModel,
+)
 from src.kiosk.events import get_event_or_404
 from src.database import get_db
 from src.upload import delete_file
@@ -23,7 +31,10 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
     try:
         items = (
             db.execute(
-                select(KioskEvent).where(KioskEvent.is_visible == True).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())  # noqa: E712
+                select(KioskEvent)
+                .where(KioskEvent.is_visible == True)  # noqa: E712
+                .options(selectinload(KioskEvent.documents))
+                .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
             )
             .scalars()
             .all()
@@ -43,7 +54,15 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
 )
 def get_all_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
     try:
-        items = db.execute(select(KioskEvent).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())).scalars().all()
+        items = (
+            db.execute(
+                select(KioskEvent)
+                .options(selectinload(KioskEvent.documents))
+                .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
+            )
+            .scalars()
+            .all()
+        )
         return items
     except Exception as e:
         app_logger.exception(e)
@@ -70,6 +89,8 @@ def create_event(data: EventCreateModel, db: Session = Depends(get_db)) -> Kiosk
         db.add(item)
         db.commit()
         db.refresh(item)
+        # Load documents relationship (empty on create)
+        db.execute(select(KioskEvent).where(KioskEvent.id == item.id).options(selectinload(KioskEvent.documents))).scalar_one()
         return item
     except Exception as e:
         app_logger.exception(e)
@@ -125,6 +146,8 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
 
         if item.thumbnail_path:
             delete_file(item.thumbnail_path)
+        for doc in item.documents:
+            delete_file(doc.file_path)
 
         db.delete(item)
         db.commit()
@@ -134,3 +157,78 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete event.")
+
+
+@router.post(
+    "/{event_id}/views",
+    status_code=status.HTTP_200_OK,
+    name="Increment Event Views",
+    response_model=ResponseModel,
+)
+def increment_views(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+    try:
+        item = db.execute(select(KioskEvent).where(KioskEvent.id == event_id)).scalar_one_or_none()
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found.")
+        item.views = (item.views or 0) + 1
+        db.commit()
+        return ResponseModel()
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to increment views.")
+
+
+@router.post(
+    "/{event_id}/documents",
+    status_code=status.HTTP_201_CREATED,
+    name="Add Event Document",
+    dependencies=[Depends(get_auth_user)],
+    response_model=EventDocumentModel,
+)
+def add_document(event_id: int, data: EventDocumentCreateModel, db: Session = Depends(get_db)) -> EventDocument:
+    try:
+        get_event_or_404(event_id, db)
+        doc = EventDocument(
+            event_id=event_id,
+            name=data.name,
+            file_path=data.file_path,
+            type=data.type,
+            sort_order=data.sort_order,
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to add document.")
+
+
+@router.delete(
+    "/{event_id}/documents/{doc_id}",
+    status_code=status.HTTP_200_OK,
+    name="Delete Event Document",
+    dependencies=[Depends(get_auth_user)],
+    response_model=ResponseModel,
+)
+def delete_document(event_id: int, doc_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+    try:
+        doc = db.execute(
+            select(EventDocument).where(EventDocument.id == doc_id, EventDocument.event_id == event_id)
+        ).scalar_one_or_none()
+        if not doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+
+        delete_file(doc.file_path)
+        db.delete(doc)
+        db.commit()
+        return ResponseModel()
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete document.")

@@ -160,6 +160,27 @@ def delete_news(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
 
 
 @router.post(
+    "/{news_id}/views",
+    status_code=status.HTTP_200_OK,
+    name="Increment News Views",
+    response_model=ResponseModel,
+)
+def increment_views(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+    try:
+        item = db.execute(select(NewsItem).where(NewsItem.id == news_id)).scalar_one_or_none()
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News item not found.")
+        item.views = (item.views or 0) + 1
+        db.commit()
+        return ResponseModel()
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to increment views.")
+
+
+@router.post(
     "/{news_id}/documents",
     status_code=status.HTTP_201_CREATED,
     name="Add News Document",

@@ -21,6 +21,7 @@ class PresentationItemModel(BaseModel):
     description: str
     thumbnail_path: str | None
     is_visible: bool
+    views: int = 0
     category_id: int | None
     category_name: str | None
     documents: list[PresentationDocumentModel] = []

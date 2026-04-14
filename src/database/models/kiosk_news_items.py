@@ -1,7 +1,7 @@
 from sqlalchemy.dialects.mysql import BIGINT, LONGTEXT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, relationship, Mapped
-from sqlalchemy import Boolean, Date, String, TIMESTAMP
+from sqlalchemy import Boolean, Date, Integer, String, TIMESTAMP
 
 from src.database.base import Base
 
@@ -17,6 +17,7 @@ class NewsItem(Base):
     description: Mapped[str] = mapped_column(LONGTEXT, nullable=False)
     thumbnail_path: Mapped[str] = mapped_column(String(500), nullable=True)
     is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default='1')
+    views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
 
     documents = relationship("NewsDocument", back_populates="news_item", cascade="all, delete-orphan", order_by="NewsDocument.sort_order")
 

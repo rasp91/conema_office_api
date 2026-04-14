@@ -165,6 +165,27 @@ def delete_presentation(presentation_id: int, db: Session = Depends(get_db)) -> 
 
 
 @router.post(
+    "/{presentation_id}/views",
+    status_code=status.HTTP_200_OK,
+    name="Increment Presentation Views",
+    response_model=ResponseModel,
+)
+def increment_views(presentation_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+    try:
+        item = db.execute(select(PresentationItem).where(PresentationItem.id == presentation_id)).scalar_one_or_none()
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Presentation not found.")
+        item.views = (item.views or 0) + 1
+        db.commit()
+        return ResponseModel()
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to increment views.")
+
+
+@router.post(
     "/{presentation_id}/documents",
     status_code=status.HTTP_201_CREATED,
     name="Add Presentation Document",

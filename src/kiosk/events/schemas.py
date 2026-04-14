@@ -3,6 +3,17 @@ import datetime
 from pydantic import BaseModel
 
 
+class EventDocumentModel(BaseModel):
+    id: int
+    name: str
+    file_path: str
+    type: str
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
 class EventModel(BaseModel):
     id: int
     date: datetime.date
@@ -11,6 +22,8 @@ class EventModel(BaseModel):
     description: str
     thumbnail_path: str | None
     is_visible: bool
+    views: int = 0
+    documents: list[EventDocumentModel] = []
 
     class Config:
         from_attributes = True
@@ -32,6 +45,13 @@ class EventUpdateModel(BaseModel):
     description: str | None = None
     thumbnail_path: str | None = None
     is_visible: bool | None = None
+
+
+class EventDocumentCreateModel(BaseModel):
+    name: str
+    file_path: str
+    type: str
+    sort_order: int = 0
 
 
 class ResponseModel(BaseModel):
