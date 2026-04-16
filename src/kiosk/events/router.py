@@ -34,7 +34,10 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
         items = (
             db.execute(
                 select(KioskEvent)
-                .where(KioskEvent.is_visible == True, KioskEvent.date >= date.today())
+                .where(
+                    KioskEvent.is_visible == True,
+                    # KioskEvent.date >= date.today(),
+                )
                 .options(selectinload(KioskEvent.documents))
                 .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
             )
