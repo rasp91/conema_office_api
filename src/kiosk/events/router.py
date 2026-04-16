@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
@@ -32,7 +34,7 @@ def get_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
         items = (
             db.execute(
                 select(KioskEvent)
-                .where(KioskEvent.is_visible == True)  # noqa: E712
+                .where(KioskEvent.is_visible == True, KioskEvent.date >= date.today())
                 .options(selectinload(KioskEvent.documents))
                 .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
             )
@@ -56,9 +58,7 @@ def get_all_events(db: Session = Depends(get_db)) -> list[KioskEvent]:
     try:
         items = (
             db.execute(
-                select(KioskEvent)
-                .options(selectinload(KioskEvent.documents))
-                .order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
+                select(KioskEvent).options(selectinload(KioskEvent.documents)).order_by(KioskEvent.date.asc(), KioskEvent.time.asc())
             )
             .scalars()
             .all()
@@ -217,9 +217,7 @@ def add_document(event_id: int, data: EventDocumentCreateModel, db: Session = De
 )
 def delete_document(event_id: int, doc_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        doc = db.execute(
-            select(EventDocument).where(EventDocument.id == doc_id, EventDocument.event_id == event_id)
-        ).scalar_one_or_none()
+        doc = db.execute(select(EventDocument).where(EventDocument.id == doc_id, EventDocument.event_id == event_id)).scalar_one_or_none()
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 

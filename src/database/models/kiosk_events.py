@@ -17,8 +17,8 @@ class KioskEvent(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(LONGTEXT, nullable=False)
     thumbnail_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default='1')
-    views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
+    is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     documents = relationship("EventDocument", back_populates="event", cascade="all, delete-orphan", order_by="EventDocument.sort_order")
 

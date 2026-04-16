@@ -32,9 +32,7 @@ app_logger.setLevel(logging.INFO)
 
 if not app_logger.handlers:
     # Rotating file handler: daily rotation, 5 backups, pattern: app.20250131.log
-    file_handler = TimedRotatingFileHandler(
-        config.APP_LOG_PATH, when="midnight", interval=1, backupCount=5, encoding="utf-8"
-    )
+    file_handler = TimedRotatingFileHandler(config.APP_LOG_PATH, when="midnight", interval=1, backupCount=5, encoding="utf-8")
     file_handler.suffix = "%Y%m%d.log"
     file_handler.setFormatter(FILE_FORMATTER)
     app_logger.addHandler(file_handler)

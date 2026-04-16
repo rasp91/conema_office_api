@@ -19,7 +19,7 @@ class RegisterModel(BaseModel):
     acknowledged: bool = False
     gdpr: bool = False
     company: str
-    phone: str = Field(..., pattern=r'^(\+\d{1,3}\s?)?\d{3,12}$', description="Phone number")
+    phone: str = Field(..., pattern=r"^(\+\d{1,3}\s?)?\d{3,12}$", description="Phone number")
     email: EmailStr | str
     signature: str
     locate: str

@@ -18,10 +18,14 @@ class PresentationItem(Base):
     thumbnail_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    category_id: Mapped[int | None] = mapped_column(BIGINT(unsigned=True), ForeignKey("kiosk_presentation_categories.id", ondelete="SET NULL"), nullable=True)
+    category_id: Mapped[int | None] = mapped_column(
+        BIGINT(unsigned=True), ForeignKey("kiosk_presentation_categories.id", ondelete="SET NULL"), nullable=True
+    )
 
     category = relationship("PresentationCategory", back_populates="presentations")
-    documents = relationship("PresentationDocument", back_populates="presentation_item", cascade="all, delete-orphan", order_by="PresentationDocument.sort_order")
+    documents = relationship(
+        "PresentationDocument", back_populates="presentation_item", cascade="all, delete-orphan", order_by="PresentationDocument.sort_order"
+    )
 
     @property
     def category_name(self) -> str | None:

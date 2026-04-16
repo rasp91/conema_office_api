@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
 from fastapi import status, HTTPException, APIRouter, Depends
@@ -38,7 +40,7 @@ def get_news(db: Session = Depends(get_db)) -> list[NewsItem]:
         items = (
             db.execute(
                 select(NewsItem)
-                .where(NewsItem.is_visible == True)  # noqa: E712
+                .where(NewsItem.is_visible == True, NewsItem.published_at >= date.today().replace(year=date.today().year - 1))  # noqa: E712
                 .options(selectinload(NewsItem.documents))
                 .order_by(NewsItem.published_at.desc())
             )
@@ -54,7 +56,7 @@ def get_news(db: Session = Depends(get_db)) -> list[NewsItem]:
 @router.get(
     "/all",
     status_code=status.HTTP_200_OK,
-    name="Get All News",
+    name="Get All News (Admin)",
     dependencies=[Depends(get_auth_user)],
     response_model=list[NewsItemModel],
 )

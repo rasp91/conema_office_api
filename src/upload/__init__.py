@@ -32,8 +32,8 @@ FILE_EXTENSIONS = {
     "text/plain": ".txt",
 }
 
-MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10 MB
-MAX_FILE_SIZE = 20 * 1024 * 1024    # 20 MB
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 THUMBNAIL_SIZE = (640, 360)  # 16:9
 
