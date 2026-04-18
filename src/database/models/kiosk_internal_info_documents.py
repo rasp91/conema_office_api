@@ -16,7 +16,7 @@ class InternalInfoDocument(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    type: Mapped[str] = mapped_column(Enum(DocumentType), nullable=False)
+    type: Mapped[str] = mapped_column(Enum(DocumentType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     info_item = relationship("InternalInfoItem", back_populates="documents")

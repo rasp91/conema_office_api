@@ -4,7 +4,7 @@ from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_presentation_documents import PresentationDocument
 from src.database.models.kiosk_presentation_items import PresentationItem
-from src.enums import PresentationDocumentType
+from src.enums import DocumentType
 from src.kiosk.presentations.schemas import (
     PresentationDocumentCreateModel,
     PresentationItemUpdateModel,
@@ -153,7 +153,7 @@ def delete_presentation(presentation_id: int, db: Session = Depends(get_db)) -> 
         if item.thumbnail_path:
             delete_file(item.thumbnail_path)
         for doc in item.documents:
-            if doc.type != PresentationDocumentType.YOUTUBE:
+            if doc.type != DocumentType.YOUTUBE:
                 delete_file(doc.file_path)
 
         db.delete(item)
@@ -233,7 +233,7 @@ def delete_document(presentation_id: int, doc_id: int, db: Session = Depends(get
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        if doc.type != PresentationDocumentType.YOUTUBE:
+        if doc.type != DocumentType.YOUTUBE:
             delete_file(doc.file_path)
         db.delete(doc)
         db.commit()

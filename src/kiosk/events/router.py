@@ -16,6 +16,7 @@ from src.kiosk.events.schemas import (
 )
 from src.kiosk.events import get_event_or_404
 from src.database import get_db
+from src.enums import DocumentType
 from src.upload import delete_file
 from src.logger import app_logger
 from src.auth import get_auth_user
@@ -150,7 +151,8 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
         if item.thumbnail_path:
             delete_file(item.thumbnail_path)
         for doc in item.documents:
-            delete_file(doc.file_path)
+            if doc.type != DocumentType.YOUTUBE:
+                delete_file(doc.file_path)
 
         db.delete(item)
         db.commit()
@@ -224,7 +226,8 @@ def delete_document(event_id: int, doc_id: int, db: Session = Depends(get_db)) -
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        delete_file(doc.file_path)
+        if doc.type != DocumentType.YOUTUBE:
+            delete_file(doc.file_path)
         db.delete(doc)
         db.commit()
         return ResponseModel()

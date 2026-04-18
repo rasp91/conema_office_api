@@ -2,14 +2,14 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from src.enums import PresentationDocumentType
+from src.enums import DocumentType
 
 
 class PresentationDocumentModel(BaseModel):
     id: int
     name: str
     file_path: str
-    type: PresentationDocumentType
+    type: DocumentType
     sort_order: int
 
     class Config:
@@ -53,7 +53,7 @@ class PresentationItemUpdateModel(BaseModel):
 class PresentationDocumentCreateModel(BaseModel):
     name: str
     file_path: str
-    type: PresentationDocumentType
+    type: DocumentType
     sort_order: int = 0
 
 
