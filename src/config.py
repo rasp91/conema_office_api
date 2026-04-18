@@ -49,6 +49,9 @@ class Config(BaseSettings):
         os.makedirs(os.path.join(self.DATA_PATH, "news", "thumbnails"), exist_ok=True)
         os.makedirs(os.path.join(self.DATA_PATH, "news", "images"), exist_ok=True)
         os.makedirs(os.path.join(self.DATA_PATH, "news", "files"), exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "internal-info", "thumbnails"), exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "internal-info", "images"), exist_ok=True)
+        os.makedirs(os.path.join(self.DATA_PATH, "internal-info", "files"), exist_ok=True)
 
 
 config = Config()

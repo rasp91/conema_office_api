@@ -46,6 +46,7 @@ app.mount("/static", StaticFiles(directory=config.DATA_PATH), name="static")
 # Routers
 from src.kiosk.presentation_categories.router import router as presentation_categories_router
 from src.kiosk.presentations.router import router as presentations_router
+from src.kiosk.internal_info.router import router as internal_info_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
 from src.kiosk.news.router import router as news_router
@@ -85,3 +86,5 @@ app.include_router(
 )
 # Presentations router
 app.include_router(presentations_router, prefix="/kiosk/presentations", tags=["Presentations"], dependencies=[Depends(verify_api_key)])
+# Internal Info router
+app.include_router(internal_info_router, prefix="/kiosk/internal-info", tags=["Internal Info"], dependencies=[Depends(verify_api_key)])
