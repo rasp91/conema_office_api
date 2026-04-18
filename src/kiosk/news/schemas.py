@@ -2,12 +2,14 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from src.enums import DocumentType
+
 
 class NewsDocumentModel(BaseModel):
     id: int
     name: str
     file_path: str
-    type: str
+    type: DocumentType
     sort_order: int
 
     class Config:
@@ -47,7 +49,7 @@ class NewsItemUpdateModel(BaseModel):
 class NewsDocumentCreateModel(BaseModel):
     name: str
     file_path: str
-    type: str
+    type: DocumentType
     sort_order: int = 0
 
 

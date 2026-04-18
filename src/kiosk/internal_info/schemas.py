@@ -2,12 +2,14 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from src.enums import DocumentType
+
 
 class InternalInfoDocumentModel(BaseModel):
     id: int
     name: str
     file_path: str
-    type: str
+    type: DocumentType
     sort_order: int
 
     class Config:
@@ -47,7 +49,7 @@ class InternalInfoItemUpdateModel(BaseModel):
 class InternalInfoDocumentCreateModel(BaseModel):
     name: str
     file_path: str
-    type: str
+    type: DocumentType
     sort_order: int = 0
 
 
