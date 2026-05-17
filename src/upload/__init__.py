@@ -89,7 +89,11 @@ def delete_file(relative_path: str) -> None:
     """Delete a file from DATA_PATH by its relative path. Silently ignores missing files."""
     if not relative_path:
         return
-    full_path = os.path.join(config.DATA_PATH, relative_path)
+    data_root = os.path.realpath(config.DATA_PATH)
+    full_path = os.path.realpath(os.path.join(config.DATA_PATH, relative_path))
+    if not full_path.startswith(data_root + os.sep):
+        app_logger.warning(f"Blocked attempt to delete file outside DATA_PATH: {relative_path}")
+        return
     try:
         if os.path.isfile(full_path):
             os.remove(full_path)

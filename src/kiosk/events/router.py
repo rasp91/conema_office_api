@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select
+from sqlalchemy import select, update
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_event_documents import EventDocument
@@ -93,8 +93,6 @@ def create_event(data: EventCreateModel, db: Session = Depends(get_db)) -> Kiosk
         db.add(item)
         db.commit()
         db.refresh(item)
-        # Load documents relationship (empty on create)
-        db.execute(select(KioskEvent).where(KioskEvent.id == item.id).options(selectinload(KioskEvent.documents))).scalar_one()
         return item
     except Exception as e:
         app_logger.exception(e)
@@ -172,10 +170,9 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
 )
 def increment_views(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        item = db.execute(select(KioskEvent).where(KioskEvent.id == event_id)).scalar_one_or_none()
-        if not item:
+        result = db.execute(update(KioskEvent).where(KioskEvent.id == event_id).values(views=KioskEvent.views + 1))
+        if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found.")
-        item.views = (item.views or 0) + 1
         db.commit()
         return ResponseModel()
     except HTTPException:

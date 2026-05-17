@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_news_documents import NewsDocument
@@ -41,7 +41,7 @@ def get_news(db: Session = Depends(get_db)) -> list[NewsItem]:
         items = (
             db.execute(
                 select(NewsItem)
-                .where(NewsItem.is_visible == True, NewsItem.published_at >= date.today().replace(year=date.today().year - 1))  # noqa: E712
+                .where(NewsItem.is_visible == True, NewsItem.published_at >= date.today() - timedelta(days=365))  # noqa: E712
                 .options(selectinload(NewsItem.documents))
                 .order_by(NewsItem.published_at.desc())
             )
@@ -91,8 +91,6 @@ def create_news(data: NewsItemCreateModel, db: Session = Depends(get_db)) -> New
         db.add(item)
         db.commit()
         db.refresh(item)
-        # Load documents relationship (empty on create)
-        db.execute(select(NewsItem).where(NewsItem.id == item.id).options(selectinload(NewsItem.documents))).scalar_one()
         return item
     except Exception as e:
         app_logger.exception(e)
@@ -110,8 +108,10 @@ def update_news(news_id: int, data: NewsItemUpdateModel, db: Session = Depends(g
     try:
         item = _get_news_item_or_404(news_id, db)
 
-        if data.published_at is not None:
-            item.published_at = data.published_at
+        # ? For Testing - Revert if needed or remote tis block
+        # if data.published_at is not None:
+        #     item.published_at = data.published_at
+        item.published_at = func.now()
         if data.title is not None:
             item.title = data.title
         if data.description is not None:
@@ -171,10 +171,9 @@ def delete_news(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
 )
 def increment_views(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        item = db.execute(select(NewsItem).where(NewsItem.id == news_id)).scalar_one_or_none()
-        if not item:
+        result = db.execute(update(NewsItem).where(NewsItem.id == news_id).values(views=NewsItem.views + 1))
+        if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News item not found.")
-        item.views = (item.views or 0) + 1
         db.commit()
         return ResponseModel()
     except HTTPException:

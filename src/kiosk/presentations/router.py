@@ -1,5 +1,5 @@
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select
+from sqlalchemy import func, select
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_presentation_documents import PresentationDocument
@@ -113,8 +113,10 @@ def update_presentation(presentation_id: int, data: PresentationItemUpdateModel,
     try:
         item = get_presentation_or_404(presentation_id, db)
 
-        if data.published_at is not None:
-            item.published_at = data.published_at
+        # ? For Testing - Revert if needed or remote tis block
+        # if data.published_at is not None:
+        #     item.published_at = data.published_at
+        item.published_at = func.now()
         if data.title is not None:
             item.title = data.title
         if data.description is not None:

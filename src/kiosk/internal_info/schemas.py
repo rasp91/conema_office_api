@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -18,7 +18,7 @@ class InternalInfoDocumentModel(BaseModel):
 
 class InternalInfoItemModel(BaseModel):
     id: int
-    published_at: date
+    published_at: datetime
     title: str
     description: str
     thumbnail_path: str | None
@@ -31,7 +31,7 @@ class InternalInfoItemModel(BaseModel):
 
 
 class InternalInfoItemCreateModel(BaseModel):
-    published_at: date
+    published_at: datetime
     title: str
     description: str
     thumbnail_path: str | None = None
@@ -39,7 +39,7 @@ class InternalInfoItemCreateModel(BaseModel):
 
 
 class InternalInfoItemUpdateModel(BaseModel):
-    published_at: date | None = None
+    published_at: datetime | None = None
     title: str | None = None
     description: str | None = None
     thumbnail_path: str | None = None

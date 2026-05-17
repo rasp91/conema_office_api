@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_internal_info_documents import InternalInfoDocument
@@ -45,7 +45,7 @@ def get_internal_info(db: Session = Depends(get_db)) -> list[InternalInfoItem]:
                 select(InternalInfoItem)
                 .where(
                     InternalInfoItem.is_visible == True,  # noqa: E712
-                    InternalInfoItem.published_at >= date.today().replace(year=date.today().year - 1),
+                    InternalInfoItem.published_at >= date.today() - timedelta(days=365),
                 )
                 .options(selectinload(InternalInfoItem.documents))
                 .order_by(InternalInfoItem.published_at.desc())
@@ -100,9 +100,6 @@ def create_internal_info(data: InternalInfoItemCreateModel, db: Session = Depend
         db.add(item)
         db.commit()
         db.refresh(item)
-        db.execute(
-            select(InternalInfoItem).where(InternalInfoItem.id == item.id).options(selectinload(InternalInfoItem.documents))
-        ).scalar_one()
         return item
     except Exception as e:
         app_logger.exception(e)
@@ -120,8 +117,10 @@ def update_internal_info(item_id: int, data: InternalInfoItemUpdateModel, db: Se
     try:
         item = _get_item_or_404(item_id, db)
 
-        if data.published_at is not None:
-            item.published_at = data.published_at
+        # ? For Testing - Revert if needed or remote tis block
+        # if data.published_at is not None:
+        #     item.published_at = data.published_at
+        item.published_at = func.now()
         if data.title is not None:
             item.title = data.title
         if data.description is not None:
@@ -178,10 +177,9 @@ def delete_internal_info(item_id: int, db: Session = Depends(get_db)) -> Respons
 )
 def increment_views(item_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        item = db.execute(select(InternalInfoItem).where(InternalInfoItem.id == item_id)).scalar_one_or_none()
-        if not item:
+        result = db.execute(update(InternalInfoItem).where(InternalInfoItem.id == item_id).values(views=InternalInfoItem.views + 1))
+        if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Internal info item not found.")
-        item.views = (item.views or 0) + 1
         db.commit()
         return ResponseModel()
     except HTTPException:
