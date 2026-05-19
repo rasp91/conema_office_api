@@ -91,7 +91,7 @@ def get_all_internal_info(db: Session = Depends(get_db)) -> list[InternalInfoIte
 def create_internal_info(data: InternalInfoItemCreateModel, db: Session = Depends(get_db)) -> InternalInfoItem:
     try:
         item = InternalInfoItem(
-            published_at=data.published_at,
+            published_at=func.now(),
             title=data.title,
             description=data.description,
             thumbnail_path=data.thumbnail_path,

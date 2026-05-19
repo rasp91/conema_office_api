@@ -82,7 +82,7 @@ def get_all_news(db: Session = Depends(get_db)) -> list[NewsItem]:
 def create_news(data: NewsItemCreateModel, db: Session = Depends(get_db)) -> NewsItem:
     try:
         item = NewsItem(
-            published_at=data.published_at,
+            published_at=func.now(),
             title=data.title,
             description=data.description,
             thumbnail_path=data.thumbnail_path,

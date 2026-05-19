@@ -33,7 +33,6 @@ class PresentationItemModel(BaseModel):
 
 
 class PresentationItemCreateModel(BaseModel):
-    published_at: datetime
     title: str
     description: str
     thumbnail_path: str | None = None
@@ -42,7 +41,6 @@ class PresentationItemCreateModel(BaseModel):
 
 
 class PresentationItemUpdateModel(BaseModel):
-    published_at: datetime | None = None
     title: str | None = None
     description: str | None = None
     thumbnail_path: str | None = None

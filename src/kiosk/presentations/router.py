@@ -80,7 +80,7 @@ def get_all_presentations(db: Session = Depends(get_db)) -> list[PresentationIte
 def create_presentation(data: PresentationItemCreateModel, db: Session = Depends(get_db)) -> PresentationItem:
     try:
         item = PresentationItem(
-            published_at=data.published_at,
+            published_at=func.now(),
             title=data.title,
             description=data.description,
             thumbnail_path=data.thumbnail_path,

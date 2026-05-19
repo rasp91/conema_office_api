@@ -31,7 +31,6 @@ class InternalInfoItemModel(BaseModel):
 
 
 class InternalInfoItemCreateModel(BaseModel):
-    published_at: datetime
     title: str
     description: str
     thumbnail_path: str | None = None
@@ -39,7 +38,6 @@ class InternalInfoItemCreateModel(BaseModel):
 
 
 class InternalInfoItemUpdateModel(BaseModel):
-    published_at: datetime | None = None
     title: str | None = None
     description: str | None = None
     thumbnail_path: str | None = None
