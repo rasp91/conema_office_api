@@ -1,6 +1,7 @@
 import datetime
+import re
 
-from pydantic import BaseModel
+from pydantic import model_validator, BaseModel
 
 from src.enums import DocumentType
 
@@ -54,6 +55,13 @@ class EventDocumentCreateModel(BaseModel):
     file_path: str
     type: DocumentType
     sort_order: int = 0
+
+    @model_validator(mode="after")
+    def validate_youtube_url(self):
+        if self.type == DocumentType.YOUTUBE:
+            if not re.match(r"^https://(www\.)?(youtube\.com|youtu\.be)/", self.file_path):
+                raise ValueError("file_path must be a valid YouTube URL for type youtube")
+        return self
 
 
 class ResponseModel(BaseModel):

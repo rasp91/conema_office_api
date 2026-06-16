@@ -1,4 +1,4 @@
-from sqlalchemy.dialects.mysql import BIGINT, MEDIUMBLOB
+from sqlalchemy.dialects.mysql import MEDIUMBLOB, BIGINT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, Mapped
 from sqlalchemy import String, TIMESTAMP

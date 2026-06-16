@@ -1,6 +1,6 @@
 import logging
-import os
 import sys
+import os
 from logging.handlers import TimedRotatingFileHandler
 
 from src.config import config

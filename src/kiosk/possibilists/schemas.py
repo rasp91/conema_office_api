@@ -1,12 +1,11 @@
-import re
 from datetime import datetime
 
-from pydantic import model_validator, BaseModel
+from pydantic import BaseModel
 
 from src.enums import DocumentType
 
 
-class PresentationDocumentModel(BaseModel):
+class PossibilistDocumentModel(BaseModel):
     id: int
     name: str
     file_path: str
@@ -17,7 +16,7 @@ class PresentationDocumentModel(BaseModel):
         from_attributes = True
 
 
-class PresentationItemModel(BaseModel):
+class PossibilistItemModel(BaseModel):
     id: int
     published_at: datetime
     title: str
@@ -27,13 +26,13 @@ class PresentationItemModel(BaseModel):
     views: int = 0
     category_id: int | None
     category_name: str | None
-    documents: list[PresentationDocumentModel] = []
+    documents: list[PossibilistDocumentModel] = []
 
     class Config:
         from_attributes = True
 
 
-class PresentationItemCreateModel(BaseModel):
+class PossibilistItemCreateModel(BaseModel):
     title: str
     description: str
     thumbnail_path: str | None = None
@@ -41,7 +40,7 @@ class PresentationItemCreateModel(BaseModel):
     category_id: int | None = None
 
 
-class PresentationItemUpdateModel(BaseModel):
+class PossibilistItemUpdateModel(BaseModel):
     title: str | None = None
     description: str | None = None
     thumbnail_path: str | None = None
@@ -49,18 +48,11 @@ class PresentationItemUpdateModel(BaseModel):
     category_id: int | None = None
 
 
-class PresentationDocumentCreateModel(BaseModel):
+class PossibilistDocumentCreateModel(BaseModel):
     name: str
     file_path: str
     type: DocumentType
     sort_order: int = 0
-
-    @model_validator(mode="after")
-    def validate_youtube_url(self):
-        if self.type == DocumentType.YOUTUBE:
-            if not re.match(r"^https://(www\.)?(youtube\.com|youtu\.be)/", self.file_path):
-                raise ValueError("file_path must be a valid YouTube URL for type youtube")
-        return self
 
 
 class ResponseModel(BaseModel):

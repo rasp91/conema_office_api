@@ -1,7 +1,7 @@
-from sqlalchemy.dialects.mysql import BIGINT, LONGTEXT
+from sqlalchemy.dialects.mysql import LONGTEXT, BIGINT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, relationship, Mapped
-from sqlalchemy import Boolean, Integer, String, TIMESTAMP
+from sqlalchemy import Integer, Boolean, String, TIMESTAMP
 
 from src.database.base import Base
 

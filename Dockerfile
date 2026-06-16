@@ -28,8 +28,14 @@ RUN python -m pip install --upgrade pip setuptools \
 # Copy the rest of the project into the container
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 80
+# Make the startup script executable
+RUN chmod +x docker-start.sh
 
-# Run the FastAPI app using uvicorn
-CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "80"]
+# Default port (can be overridden by docker-compose)
+ENV APP_PORT=80
+
+# Expose the port the app runs on
+EXPOSE $APP_PORT
+
+# On startup: validate alembic migrations, apply if needed (logs → /app/logs/startup.log), then start uvicorn
+CMD ["sh", "docker-start.sh"]

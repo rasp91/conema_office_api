@@ -1,6 +1,6 @@
-from fastapi import HTTPException, status
+from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from fastapi import status, HTTPException
 
 from src.database.models.kiosk_events import KioskEvent
 

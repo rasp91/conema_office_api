@@ -13,3 +13,4 @@ services:
             - /volume2/docker/roechling_office_fastapi_app/logs:/app/logs
         environment:
             - TZ=Europe/Prague
+            - APP_PORT=80

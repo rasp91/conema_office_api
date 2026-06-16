@@ -1,7 +1,7 @@
-from datetime import date, timedelta
+from datetime import timedelta, date
 
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import func, select, update
+from sqlalchemy import update, select, func
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_news_documents import NewsDocument
@@ -15,9 +15,9 @@ from src.kiosk.news.schemas import (
     NewsItemModel,
 )
 from src.database import get_db
-from src.enums import DocumentType
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import DocumentType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -108,9 +108,6 @@ def update_news(news_id: int, data: NewsItemUpdateModel, db: Session = Depends(g
     try:
         item = _get_news_item_or_404(news_id, db)
 
-        # ? For Testing - Revert if needed or remote tis block
-        # if data.published_at is not None:
-        #     item.published_at = data.published_at
         item.published_at = func.now()
         if data.title is not None:
             item.title = data.title

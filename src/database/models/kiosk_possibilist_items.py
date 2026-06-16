@@ -6,8 +6,8 @@ from sqlalchemy import ForeignKey, Integer, Boolean, String, TIMESTAMP
 from src.database.base import Base
 
 
-class PresentationItem(Base):
-    __tablename__ = "kiosk_presentation_items"
+class PossibilistItem(Base):
+    __tablename__ = "kiosk_possibilist_items"
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
     created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
@@ -19,12 +19,12 @@ class PresentationItem(Base):
     is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     category_id: Mapped[int | None] = mapped_column(
-        BIGINT(unsigned=True), ForeignKey("kiosk_presentation_categories.id", ondelete="SET NULL"), nullable=True
+        BIGINT(unsigned=True), ForeignKey("kiosk_possibilist_categories.id", ondelete="SET NULL"), nullable=True
     )
 
-    category = relationship("PresentationCategory", back_populates="presentations")
+    category = relationship("PossibilistCategory", back_populates="possibilists")
     documents = relationship(
-        "PresentationDocument", back_populates="presentation_item", cascade="all, delete-orphan", order_by="PresentationDocument.sort_order"
+        "PossibilistDocument", back_populates="possibilist_item", cascade="all, delete-orphan", order_by="PossibilistDocument.sort_order"
     )
 
     @property

@@ -1,12 +1,12 @@
-import io
-import os
 import uuid
+import os
+import io
 
-from fastapi import HTTPException, UploadFile, status
+from fastapi import status, HTTPException, UploadFile
 from PIL import Image
 
-from src.config import config
 from src.logger import app_logger
+from src.config import config
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_FILE_TYPES = {

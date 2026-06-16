@@ -1,6 +1,6 @@
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import mapped_column, relationship, Mapped
-from sqlalchemy import Enum, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String, Enum
 
 from src.database.base import Base
 from src.enums import DocumentType

@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select, update
+from sqlalchemy import update, select
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_event_documents import EventDocument
@@ -16,9 +16,9 @@ from src.kiosk.events.schemas import (
 )
 from src.kiosk.events import get_event_or_404
 from src.database import get_db
-from src.enums import DocumentType
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import DocumentType
 from src.auth import get_auth_user
 
 router = APIRouter()

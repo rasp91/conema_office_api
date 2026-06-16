@@ -1,10 +1,9 @@
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import func, select
+from sqlalchemy import select, func
 from fastapi import status, HTTPException, APIRouter, Depends
 
 from src.database.models.kiosk_presentation_documents import PresentationDocument
 from src.database.models.kiosk_presentation_items import PresentationItem
-from src.enums import DocumentType
 from src.kiosk.presentations.schemas import (
     PresentationDocumentCreateModel,
     PresentationItemUpdateModel,
@@ -17,6 +16,7 @@ from src.kiosk.presentations import get_presentation_or_404
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import DocumentType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -113,9 +113,6 @@ def update_presentation(presentation_id: int, data: PresentationItemUpdateModel,
     try:
         item = get_presentation_or_404(presentation_id, db)
 
-        # ? For Testing - Revert if needed or remote tis block
-        # if data.published_at is not None:
-        #     item.published_at = data.published_at
         item.published_at = func.now()
         if data.title is not None:
             item.title = data.title

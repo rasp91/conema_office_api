@@ -9,7 +9,7 @@ from src.auth import verify_api_key
 
 app = FastAPI(
     title="Roechling FastAPI",
-    version="1.1.1",
+    version="1.1.2",
     description="A simple API to interact with the Roechling database.",
     docs_url="/docs",
 )
@@ -45,8 +45,10 @@ app.mount("/static", StaticFiles(directory=config.DATA_PATH), name="static")
 
 # Routers
 from src.kiosk.presentation_categories.router import router as presentation_categories_router
+from src.kiosk.possibilist_categories.router import router as possibilist_categories_router
 from src.kiosk.presentations.router import router as presentations_router
 from src.kiosk.internal_info.router import router as internal_info_router
+from src.kiosk.possibilists.router import router as possibilists_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
 from src.kiosk.news.router import router as news_router
@@ -86,5 +88,14 @@ app.include_router(
 )
 # Presentations router
 app.include_router(presentations_router, prefix="/kiosk/presentations", tags=["Presentations"], dependencies=[Depends(verify_api_key)])
+# Possibilist categories router (must be registered before possibilists to avoid /{id} conflict)
+app.include_router(
+    possibilist_categories_router,
+    prefix="/kiosk/possibilists/categories",
+    tags=["Possibilist Categories"],
+    dependencies=[Depends(verify_api_key)],
+)
+# Possibilists router
+app.include_router(possibilists_router, prefix="/kiosk/possibilists", tags=["Possibilists"], dependencies=[Depends(verify_api_key)])
 # Internal Info router
 app.include_router(internal_info_router, prefix="/kiosk/internal-info", tags=["Internal Info"], dependencies=[Depends(verify_api_key)])
