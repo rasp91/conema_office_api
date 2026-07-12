@@ -14,7 +14,7 @@
 # --- Configuration ------------------------------------------------------------
 $AppPath     = "E:\\api\\office_api"
 $VenvPath    = "$AppPath\\venv"
-$Python      = "C:\\Python311\\python.exe"
+$Python      = "E:\\Python313\\python.exe"
 $AppPoolName = "rchl_office_api"
 # -----------------------------------------------------------------------------
 
