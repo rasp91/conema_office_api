@@ -11,6 +11,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 pytz
 requests
+msal
 pydantic[email]
 weasyprint
 jinja2

@@ -49,6 +49,7 @@ from src.kiosk.possibilist_categories.router import router as possibilist_catego
 from src.kiosk.presentations.router import router as presentations_router
 from src.kiosk.internal_info.router import router as internal_info_router
 from src.kiosk.possibilists.router import router as possibilists_router
+from src.kiosk.sharepoint.router import router as sharepoint_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
 from src.kiosk.news.router import router as news_router
@@ -99,3 +100,5 @@ app.include_router(
 app.include_router(possibilists_router, prefix="/kiosk/possibilists", tags=["Possibilists"], dependencies=[Depends(verify_api_key)])
 # Internal Info router
 app.include_router(internal_info_router, prefix="/kiosk/internal-info", tags=["Internal Info"], dependencies=[Depends(verify_api_key)])
+# SharePoint router
+app.include_router(sharepoint_router, prefix="/kiosk/sharepoint", tags=["SharePoint"], dependencies=[Depends(verify_api_key)])

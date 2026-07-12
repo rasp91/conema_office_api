@@ -34,6 +34,20 @@ class Config(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int
     JWT_ACCESS_TOKEN_EXPIRE_DAYS: int
 
+    # Sharepoint
+    SP_TENANT_ID: str
+    SP_CLIENT_ID: str
+    SP_CLIENT_SECRET: str
+    SP_SITE_HOSTNAME: str
+    SP_SITE_PATH: str
+    SP_NEWS_LIST_ID: str
+    SP_SITE_ASSETS_LIST_ID: str
+    SP_SITE_PAGES_LIST_ID: str
+    SP_LANGUAGE_FILTER: str
+    SP_ARTICLES_LIMIT: int
+    SP_SYNC_INTERVAL_MINUTES: int
+    SP_SYNC_KEY: str
+
     def init(self):
         # Paths
         self.LOGS_PATH = os.path.join(self.ROOT_PATH, "logs")

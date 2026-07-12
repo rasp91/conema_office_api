@@ -6,4 +6,4 @@ venv*/
 global.log
 data/
 
-.claude
+.claude/settings.*
