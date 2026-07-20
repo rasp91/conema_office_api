@@ -9,6 +9,7 @@ class SharePointArticleModel(BaseModel):
     description: str | None = None
     published_at: datetime | None = None
     icon_path: str | None = None
+    divisions: list[str] = []
 
     class Config:
         from_attributes = True
@@ -21,6 +22,7 @@ class SharePointArticleDetailModel(BaseModel):
     published_at: datetime | None = None
     web_url: str | None = None
     has_icon: bool
+    divisions: list[str] = []
 
     class Config:
         from_attributes = True

@@ -1,10 +1,11 @@
 import threading
 from datetime import timedelta, timezone, datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
 from fastapi import status, BackgroundTasks, HTTPException, APIRouter, Depends, Header, Query
 
+from src.database.models.kiosk_sharepoint_article_divisions import SharePointArticleDivision
 from src.database.models.kiosk_sharepoint_articles import SharePointArticle
 from src.kiosk.sharepoint.graph_client import GraphAPIError
 from src.kiosk.sharepoint.schemas import SharePointArticleDetailModel, SharePointArticleModel, SyncResponseModel
@@ -72,14 +73,42 @@ def _run_background_refresh(detail: dict) -> None:
 def get_sharepoint_articles(
     background_tasks: BackgroundTasks,
     limit: int = Query(default=config.SP_ARTICLES_LIMIT, ge=1, le=200),
+    division: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> list[SharePointArticle]:
     try:
         _maybe_trigger_background_sync(background_tasks, db)
-        return db.execute(select(SharePointArticle).order_by(SharePointArticle.published_at.desc()).limit(limit)).scalars().all()
+        query = (
+            select(SharePointArticle)
+            .options(selectinload(SharePointArticle.division_links))
+            .order_by(SharePointArticle.published_at.desc())
+            .limit(limit)
+        )
+        if division is not None:
+            query = query.join(SharePointArticleDivision).where(SharePointArticleDivision.division == division)
+        return db.execute(query).scalars().all()
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch SharePoint articles.")
+
+
+@router.get(
+    "/divisions",
+    status_code=status.HTTP_200_OK,
+    name="Get SharePoint Divisions",
+    response_model=list[str],
+)
+def get_sharepoint_divisions(db: Session = Depends(get_db)) -> list[str]:
+    # Divisions aren't a fixed set - this reflects whatever values are actually present
+    # in the locally synced articles, so the kiosk never offers a filter that would
+    # render an empty grid.
+    try:
+        return (
+            db.execute(select(SharePointArticleDivision.division).distinct().order_by(SharePointArticleDivision.division)).scalars().all()
+        )
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch SharePoint divisions.")
 
 
 @router.post(
@@ -90,6 +119,14 @@ def get_sharepoint_articles(
     response_model=SyncResponseModel,
 )
 def sync_sharepoint_articles(db: Session = Depends(get_db)) -> SyncResponseModel:
+    # Shares _sync_lock/_sync_running with the background auto-trigger so a scheduler-invoked
+    # sync can't overlap an in-progress one - _sync_divisions replaces division rows via
+    # delete-then-insert, which isn't safe under concurrent syncs of the same article id.
+    global _sync_running
+    with _sync_lock:
+        if _sync_running:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A SharePoint sync is already running.")
+        _sync_running = True
     try:
         return SyncResponseModel(synced=sync.sync_articles(db))
     except GraphAPIError as e:
@@ -98,6 +135,9 @@ def sync_sharepoint_articles(db: Session = Depends(get_db)) -> SyncResponseModel
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to sync SharePoint articles.")
+    finally:
+        with _sync_lock:
+            _sync_running = False
 
 
 @router.get(

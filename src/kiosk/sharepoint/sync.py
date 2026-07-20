@@ -3,8 +3,9 @@ from datetime import timezone, datetime
 
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
+from src.database.models.kiosk_sharepoint_article_divisions import SharePointArticleDivision
 from src.database.models.kiosk_sharepoint_articles import SharePointArticle
 from src.kiosk.sharepoint.graph_client import GraphAPIError
 from src.database.models.variables import Variable
@@ -62,10 +63,17 @@ def _sync_icon(article_id: str, has_icon: bool, previous_icon_path: str | None) 
     return relative_path
 
 
+def _sync_divisions(db: Session, article_id: str, divisions: list[str]) -> None:
+    """Replace an article's division links wholesale with the latest set from SharePoint."""
+    db.execute(delete(SharePointArticleDivision).where(SharePointArticleDivision.article_id == article_id))
+    if divisions:
+        db.add_all([SharePointArticleDivision(article_id=article_id, division=d) for d in divisions])
+
+
 def _upsert_article(db: Session, article: dict, previous_icon_path: str | None) -> None:
     """Insert or update a single article row (atomic upsert, safe under concurrent syncs of
-    the same id) plus its icon file. Does not commit - the caller controls the transaction
-    boundary."""
+    the same id) plus its icon file and division links. Does not commit - the caller
+    controls the transaction boundary."""
     icon_path = _sync_icon(article["id"], article["has_icon"], previous_icon_path)
     published_at = _parse_published_at(article["published_at"])
 
@@ -83,6 +91,7 @@ def _upsert_article(db: Session, article: dict, previous_icon_path: str | None) 
         icon_path=stmt.inserted.icon_path,
     )
     db.execute(stmt)
+    _sync_divisions(db, article["id"], article["divisions"])
 
 
 def sync_articles(db: Session) -> int:
@@ -113,6 +122,7 @@ def upsert_article_from_detail(db: Session, detail: dict) -> None:
         "description": detail.get("description"),
         "published_at": detail["published_at"],
         "has_icon": detail["has_icon"],
+        "divisions": detail.get("divisions", []),
     }
     previous_icon_path = db.execute(select(SharePointArticle.icon_path).where(SharePointArticle.id == article["id"])).scalar_one_or_none()
     _upsert_article(db, article, previous_icon_path)

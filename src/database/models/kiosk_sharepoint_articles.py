@@ -1,5 +1,5 @@
 from sqlalchemy.sql import func
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy import String, Text, TIMESTAMP
 
 from src.database.base import Base
@@ -18,5 +18,14 @@ class SharePointArticle(Base):
     published_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=True)
     icon_path: Mapped[str] = mapped_column(String(500), nullable=True)
 
+    # SharePoint's "Division" is a multi-select choice field (~3.6% of articles carry more
+    # than one), so it's normalized into kiosk_sharepoint_article_divisions rather than a
+    # single column - lets callers filter/join by division directly.
+    division_links = relationship("SharePointArticleDivision", back_populates="article", cascade="all, delete-orphan")
+
+    @property
+    def divisions(self) -> list[str]:
+        return [link.division for link in self.division_links]
+
     def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns} | {"divisions": self.divisions}

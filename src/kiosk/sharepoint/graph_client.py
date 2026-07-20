@@ -165,6 +165,12 @@ def _inline_image_html(properties: dict) -> str | None:
     return f'<img src="data:{content_type};base64,{b64}" alt="{alt}" style="max-width:100%;height:auto;" />'
 
 
+def _resolve_divisions(fields: dict) -> list[str]:
+    """SharePoint's Division is a multi-select choice field - an article can carry more
+    than one (e.g. cross-posted content), so all selected values are kept."""
+    return fields.get("Division") or []
+
+
 def _get_list_item(article_id: str) -> dict:
     resp = _request("GET", f"{GRAPH}/sites/{_get_site_id()}/lists/{config.SP_NEWS_LIST_ID}/items/{article_id}?$expand=fields")
     return resp.json()
@@ -224,6 +230,7 @@ def list_articles(limit: int) -> list[dict]:
             "description": item.get("fields", {}).get("Description"),
             "published_at": item.get("fields", {}).get("PublishedOn"),
             "has_icon": bool(_banner_image_relative_path(item.get("fields", {}).get("BannerImage"))),
+            "divisions": _resolve_divisions(item.get("fields", {})),
         }
         for item in items
     ]
@@ -253,6 +260,7 @@ def get_article(article_id: str) -> dict:
         "published_at": fields.get("PublishedOn"),
         "web_url": page_url,
         "has_icon": bool(_banner_image_relative_path(fields.get("BannerImage"))),
+        "divisions": _resolve_divisions(fields),
     }
 
 
