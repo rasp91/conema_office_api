@@ -78,6 +78,7 @@ try {
     $apiKey = Get-EnvValue "API_KEY"
     $syncKey = Get-EnvValue "SP_SYNC_KEY"
     $uri = "$ApiBaseUrl/kiosk/sharepoint/sync"
+    Write-Log "START - syncing from $uri"
     $response = Invoke-RestMethod -Method Post -Uri $uri -Headers @{ "API-KEY" = $apiKey; "SYNC-KEY" = $syncKey } -TimeoutSec 120
     Write-Log "OK - synced $($response.synced) articles"
     exit 0
