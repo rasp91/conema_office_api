@@ -2,7 +2,7 @@ from datetime import timedelta, date
 
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import update, select, func
-from fastapi import status, HTTPException, APIRouter, Depends
+from fastapi import status, HTTPException, APIRouter, Request, Depends
 
 from src.database.models.kiosk_internal_info_documents import InternalInfoDocument
 from src.database.models.kiosk_internal_info_items import InternalInfoItem
@@ -14,6 +14,7 @@ from src.kiosk.internal_info.schemas import (
     InternalInfoItemModel,
     ResponseModel,
 )
+from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
@@ -172,12 +173,13 @@ def delete_internal_info(item_id: int, db: Session = Depends(get_db)) -> Respons
     name="Increment Internal Info Views",
     response_model=ResponseModel,
 )
-def increment_views(item_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+def increment_views(item_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         result = db.execute(update(InternalInfoItem).where(InternalInfoItem.id == item_id).values(views=InternalInfoItem.views + 1))
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Internal info item not found.")
         db.commit()
+        log_activity(db, request, "view_detail", "internal-info", item_id)
         return ResponseModel()
     except HTTPException:
         raise

@@ -2,7 +2,7 @@ from datetime import timedelta, date
 
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import update, select, func
-from fastapi import status, HTTPException, APIRouter, Depends
+from fastapi import status, HTTPException, APIRouter, Depends, Request
 
 from src.database.models.kiosk_news_documents import NewsDocument
 from src.database.models.kiosk_news_items import NewsItem
@@ -14,6 +14,7 @@ from src.kiosk.news.schemas import (
     ResponseModel,
     NewsItemModel,
 )
+from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
@@ -166,12 +167,13 @@ def delete_news(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     name="Increment News Views",
     response_model=ResponseModel,
 )
-def increment_views(news_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+def increment_views(news_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         result = db.execute(update(NewsItem).where(NewsItem.id == news_id).values(views=NewsItem.views + 1))
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News item not found.")
         db.commit()
+        log_activity(db, request, "view_detail", "news", news_id)
         return ResponseModel()
     except HTTPException:
         raise

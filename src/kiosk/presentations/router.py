@@ -1,6 +1,6 @@
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select, func
-from fastapi import status, HTTPException, APIRouter, Depends
+from fastapi import status, HTTPException, APIRouter, Depends, Request
 
 from src.database.models.kiosk_presentation_documents import PresentationDocument
 from src.database.models.kiosk_presentation_items import PresentationItem
@@ -13,6 +13,7 @@ from src.kiosk.presentations.schemas import (
     ResponseModel,
 )
 from src.kiosk.presentations import get_presentation_or_404
+from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
@@ -171,13 +172,14 @@ def delete_presentation(presentation_id: int, db: Session = Depends(get_db)) -> 
     name="Increment Presentation Views",
     response_model=ResponseModel,
 )
-def increment_views(presentation_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+def increment_views(presentation_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         item = db.execute(select(PresentationItem).where(PresentationItem.id == presentation_id)).scalar_one_or_none()
         if not item:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Presentation not found.")
         item.views = (item.views or 0) + 1
         db.commit()
+        log_activity(db, request, "view_detail", "presentation", presentation_id)
         return ResponseModel()
     except HTTPException:
         raise

@@ -52,6 +52,7 @@ from src.kiosk.possibilists.router import router as possibilists_router
 from src.kiosk.sharepoint.router import router as sharepoint_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
+from src.activity_log.router import router as activity_log_router
 from src.kiosk.news.router import router as news_router
 from src.v1.forms.router import router as forms_router
 from src.upload.router import router as upload_router
@@ -102,3 +103,5 @@ app.include_router(possibilists_router, prefix="/kiosk/possibilists", tags=["Pos
 app.include_router(internal_info_router, prefix="/kiosk/internal-info", tags=["Internal Info"], dependencies=[Depends(verify_api_key)])
 # SharePoint router
 app.include_router(sharepoint_router, prefix="/kiosk/sharepoint", tags=["SharePoint"], dependencies=[Depends(verify_api_key)])
+# Activity Log router
+app.include_router(activity_log_router, prefix="/kiosk/activity", tags=["Activity Log"], dependencies=[Depends(verify_api_key)])

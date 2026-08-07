@@ -1,6 +1,6 @@
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select, func
-from fastapi import status, HTTPException, APIRouter, Depends
+from fastapi import status, HTTPException, APIRouter, Depends, Request
 
 from src.database.models.kiosk_possibilist_categories import PossibilistCategory
 from src.database.models.kiosk_possibilist_documents import PossibilistDocument
@@ -14,6 +14,7 @@ from src.kiosk.possibilists.schemas import (
     ResponseModel,
 )
 from src.kiosk.possibilists import get_possibilist_or_404
+from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
@@ -186,13 +187,14 @@ def delete_possibilist(possibilist_id: int, db: Session = Depends(get_db)) -> Re
     name="Increment Possibilist Views",
     response_model=ResponseModel,
 )
-def increment_views(possibilist_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+def increment_views(possibilist_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         item = db.execute(select(PossibilistItem).where(PossibilistItem.id == possibilist_id)).scalar_one_or_none()
         if not item:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Possibilist not found.")
         item.views = (item.views or 0) + 1
         db.commit()
+        log_activity(db, request, "view_detail", "possibilist", possibilist_id)
         return ResponseModel()
     except HTTPException:
         raise

@@ -37,4 +37,3 @@ fi
 # 3. Spusť Uvicorn
 ###############################################################################
 exec uvicorn src.app:app --host 127.0.0.1 --port 8000 --reload
-# (exec nahra

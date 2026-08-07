@@ -6,3 +6,7 @@ reverse_sort = true
 
 [tool.black]
 line-length = 140
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"

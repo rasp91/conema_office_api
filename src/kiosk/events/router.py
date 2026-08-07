@@ -2,7 +2,7 @@ from datetime import date
 
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import update, select
-from fastapi import status, HTTPException, APIRouter, Depends
+from fastapi import status, HTTPException, APIRouter, Request, Depends
 
 from src.database.models.kiosk_event_documents import EventDocument
 from src.database.models.kiosk_events import KioskEvent
@@ -14,6 +14,7 @@ from src.kiosk.events.schemas import (
     ResponseModel,
     EventModel,
 )
+from src.activity_log.logger import log_activity
 from src.kiosk.events import get_event_or_404
 from src.database import get_db
 from src.upload import delete_file
@@ -168,12 +169,13 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     name="Increment Event Views",
     response_model=ResponseModel,
 )
-def increment_views(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
+def increment_views(event_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         result = db.execute(update(KioskEvent).where(KioskEvent.id == event_id).values(views=KioskEvent.views + 1))
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found.")
         db.commit()
+        log_activity(db, request, "view_detail", "event", event_id)
         return ResponseModel()
     except HTTPException:
         raise
