@@ -3,12 +3,13 @@ from datetime import timedelta, timezone, datetime
 
 from sqlalchemy.orm import selectinload, Session
 from sqlalchemy import select
-from fastapi import status, BackgroundTasks, HTTPException, APIRouter, Depends, Header, Query
+from fastapi import status, BackgroundTasks, HTTPException, APIRouter, Request, Depends, Header, Query
 
 from src.database.models.kiosk_sharepoint_article_divisions import SharePointArticleDivision
 from src.database.models.kiosk_sharepoint_articles import SharePointArticle
 from src.kiosk.sharepoint.graph_client import GraphAPIError
 from src.kiosk.sharepoint.schemas import SharePointArticleDetailModel, SharePointArticleModel, SyncResponseModel
+from src.activity_log.logger import log_activity
 from src.kiosk.sharepoint import graph_client, sync
 from src.database import get_db, SessionLocal
 from src.logger import app_logger
@@ -52,6 +53,13 @@ def _maybe_trigger_background_sync(background_tasks: BackgroundTasks, db: Sessio
             return
         _sync_running = True
     background_tasks.add_task(_run_background_sync)
+
+
+def _numeric_id(article_id: str) -> int | None:
+    # activity_logs.resource_id is BIGINT - SharePoint list item ids are numeric strings in
+    # practice, but fall back to None (the raw id still goes out in `meta`) rather than 500
+    # the whole request over a logging concern if that's ever not the case.
+    return int(article_id) if article_id.isdigit() else None
 
 
 def _run_background_refresh(detail: dict) -> None:
@@ -146,10 +154,18 @@ def sync_sharepoint_articles(db: Session = Depends(get_db)) -> SyncResponseModel
     name="Get SharePoint Article",
     response_model=SharePointArticleDetailModel,
 )
-def get_sharepoint_article(article_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> dict:
+def get_sharepoint_article(article_id: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> dict:
     try:
         detail = graph_client.get_article(article_id)
         background_tasks.add_task(_run_background_refresh, detail)
+        log_activity(
+            db,
+            request,
+            "view_detail",
+            "sharepoint-article",
+            _numeric_id(article_id),
+            meta={"article_id": article_id, "title": detail.get("title")},
+        )
         return detail
     except GraphAPIError as e:
         app_logger.exception(e)
