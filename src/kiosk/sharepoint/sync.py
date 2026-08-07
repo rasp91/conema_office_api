@@ -129,6 +129,19 @@ def upsert_article_from_detail(db: Session, detail: dict) -> None:
     db.commit()
 
 
+def delete_article(db: Session, article_id: str) -> None:
+    """Remove a single article row (and its icon file / division links, the latter via
+    ondelete=CASCADE) once its non-existence in SharePoint has been confirmed with a real
+    404 - never called from sync_articles, since falling outside that call's top-N window
+    doesn't mean an article was deleted, just that it's no longer recent."""
+    article = db.execute(select(SharePointArticle).where(SharePointArticle.id == article_id)).scalar_one_or_none()
+    if not article:
+        return
+    delete_file(article.icon_path)
+    db.delete(article)
+    db.commit()
+
+
 def get_last_sync(db: Session) -> datetime | None:
     var = db.execute(select(Variable).where(Variable.key == LAST_SYNC_KEY)).scalar_one_or_none()
     return datetime.fromisoformat(var.value) if var and var.value else None

@@ -146,7 +146,7 @@ def sync_sharepoint_articles(db: Session = Depends(get_db)) -> SyncResponseModel
     name="Get SharePoint Article",
     response_model=SharePointArticleDetailModel,
 )
-def get_sharepoint_article(article_id: str, background_tasks: BackgroundTasks) -> dict:
+def get_sharepoint_article(article_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> dict:
     try:
         detail = graph_client.get_article(article_id)
         background_tasks.add_task(_run_background_refresh, detail)
@@ -154,6 +154,14 @@ def get_sharepoint_article(article_id: str, background_tasks: BackgroundTasks) -
     except GraphAPIError as e:
         app_logger.exception(e)
         if e.status_code == 404:
+            # Confirmed deletion (as opposed to just "outside the latest sync page") - clean up
+            # the stale cache row now, inline, since BackgroundTasks queued here would never run:
+            # FastAPI only attaches them to a successful response, not one built from a raised
+            # exception. Best-effort - a cleanup failure shouldn't hide the real 404 from the caller.
+            try:
+                sync.delete_article(db, article_id)
+            except Exception as cleanup_error:
+                app_logger.exception(cleanup_error)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found.")
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="SharePoint service unavailable.")
     except Exception as e:
