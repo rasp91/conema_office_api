@@ -53,7 +53,7 @@ def make_thumbnail(data: bytes) -> bytes:
             new_h = int(w / target_ratio)
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
-        img = img.resize(THUMBNAIL_SIZE, Image.LANCZOS)
+        img = img.resize(THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
         out = io.BytesIO()
         img.save(out, format="JPEG", quality=85, optimize=True)
         return out.getvalue()

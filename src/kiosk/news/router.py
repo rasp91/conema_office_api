@@ -18,6 +18,7 @@ from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import ResourceType, ActionType
 from src.enums import DocumentType
 from src.auth import get_auth_user
 
@@ -173,7 +174,7 @@ def increment_views(news_id: int, request: Request, db: Session = Depends(get_db
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News item not found.")
         db.commit()
-        log_activity(db, request, "view_detail", "news", news_id)
+        log_activity(db, request, ActionType.VIEW_DETAIL, ResourceType.NEWS, news_id)
         return ResponseModel()
     except HTTPException:
         raise

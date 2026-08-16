@@ -14,6 +14,7 @@ from src.kiosk.sharepoint import graph_client, sync
 from src.database import get_db, SessionLocal
 from src.logger import app_logger
 from src.config import config
+from src.enums import ResourceType, ActionType
 
 router = APIRouter()
 
@@ -161,8 +162,8 @@ def get_sharepoint_article(article_id: str, request: Request, background_tasks: 
         log_activity(
             db,
             request,
-            "view_detail",
-            "sharepoint-article",
+            ActionType.VIEW_DETAIL,
+            ResourceType.SHAREPOINT_ARTICLE,
             _numeric_id(article_id),
             meta={"article_id": article_id, "title": detail.get("title")},
         )
@@ -170,14 +171,23 @@ def get_sharepoint_article(article_id: str, request: Request, background_tasks: 
     except GraphAPIError as e:
         app_logger.exception(e)
         if e.status_code == 404:
-            # Confirmed deletion (as opposed to just "outside the latest sync page") - clean up
-            # the stale cache row now, inline, since BackgroundTasks queued here would never run:
-            # FastAPI only attaches them to a successful response, not one built from a raised
-            # exception. Best-effort - a cleanup failure shouldn't hide the real 404 from the caller.
+            # A single 404 could be Graph eventual-consistency lag rather than a real deletion -
+            # re-check once before purging the local cache row. Only a second, corroborating 404
+            # is treated as confirmed deletion; any other outcome (success or non-404 error) skips
+            # cleanup and just surfaces the original 404 to the caller.
             try:
-                sync.delete_article(db, article_id)
-            except Exception as cleanup_error:
-                app_logger.exception(cleanup_error)
+                graph_client.get_article(article_id)
+            except GraphAPIError as retry_error:
+                if retry_error.status_code == 404:
+                    # Cleanup happens inline (not via BackgroundTasks) since those are only
+                    # attached to a successful response, never one built from a raised exception.
+                    # Best-effort - a cleanup failure shouldn't hide the real 404 from the caller.
+                    try:
+                        sync.delete_article(db, article_id)
+                    except Exception as cleanup_error:
+                        app_logger.exception(cleanup_error)
+            except Exception as retry_error:
+                app_logger.exception(retry_error)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found.")
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="SharePoint service unavailable.")
     except Exception as e:

@@ -18,6 +18,7 @@ from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import ResourceType, ActionType
 from src.enums import DocumentType
 from src.auth import get_auth_user
 
@@ -194,7 +195,7 @@ def increment_views(possibilist_id: int, request: Request, db: Session = Depends
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Possibilist not found.")
         item.views = (item.views or 0) + 1
         db.commit()
-        log_activity(db, request, "view_detail", "possibilist", possibilist_id)
+        log_activity(db, request, ActionType.VIEW_DETAIL, ResourceType.POSSIBILIST, possibilist_id)
         return ResponseModel()
     except HTTPException:
         raise

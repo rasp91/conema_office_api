@@ -4,14 +4,21 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from fastapi import status, HTTPException, APIRouter, Request, Depends, Query
 
+from src.database.models.kiosk_sharepoint_articles import SharePointArticle
+from src.database.models.kiosk_internal_info_items import InternalInfoItem
+from src.database.models.kiosk_presentation_items import PresentationItem
+from src.database.models.kiosk_possibilist_items import PossibilistItem
+from src.database.models.kiosk_news_items import NewsItem
 from src.database.models.activity_logs import ActivityLog
+from src.database.models.kiosk_events import KioskEvent
 from src.activity_log.schemas import (
     PaginatedActivityLogsModel,
     ActivityDeviceCountItem,
     ActivityLogCreateModel,
     ActivitySummaryPeriod,
-    ActivityLogItemModel,
+    ActivityItemCountItem,
     ActivitySummaryModel,
+    ActivityLogItemModel,
     ActivityCountItem,
     ResponseModel,
 )
@@ -19,8 +26,52 @@ from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.logger import app_logger
 from src.auth import get_admin_user
+from src.enums import ResourceType, ActionType
 
 router = APIRouter()
+
+# The "home" resource_type is logged on every kiosk idle/landing view, so it dominates any
+# section ranking without telling us anything about what visitors actually engage with.
+# Excluded from the section breakdowns/top-section summary below rather than from logging
+# itself, so the raw event is still recorded and visible in the log listing.
+EXCLUDED_SECTIONS = (ResourceType.HOME, ResourceType.DOCUMENT)
+
+# resource_type -> (ORM model, title column) for the "view_detail" events that carry a
+# resource_id pointing at an actual content item. Keys mirror the singular resource_type
+# strings written by each kiosk detail endpoint's log_activity() call (see e.g.
+# src/kiosk/news/router.py) — distinct from the plural route-name strings page_view logs
+# for the top-sections breakdown above.
+ITEM_TITLE_MODELS: dict[str, tuple[type, str]] = {
+    ResourceType.NEWS: (NewsItem, "title"),
+    ResourceType.EVENT: (KioskEvent, "title"),
+    ResourceType.INTERNAL_INFO: (InternalInfoItem, "title"),
+    ResourceType.POSSIBILIST: (PossibilistItem, "title"),
+    ResourceType.PRESENTATION: (PresentationItem, "title"),
+    ResourceType.SHAREPOINT_ARTICLE: (SharePointArticle, "title"),
+}
+
+
+def _resolve_item_titles(db: Session, rows) -> dict[tuple[str, int], str]:
+    """Batch-resolves current titles for a set of grouped (resource_type, resource_id) rows.
+
+    One lookup query per resource_type rather than a row-by-row fetch. Items that no longer
+    exist (deleted news/event/... or a SharePoint article removed by sync) simply fall back
+    to a placeholder below — the click counts stay meaningful even once the content is gone.
+    """
+    ids_by_type: dict[str, set[int]] = {}
+    for row in rows:
+        ids_by_type.setdefault(row.resource_type, set()).add(row.resource_id)
+
+    titles: dict[tuple[str, int], str] = {}
+    for r_type, ids in ids_by_type.items():
+        model, title_attr = ITEM_TITLE_MODELS[r_type]
+        # SharePointArticle's primary key is the SharePoint list item id stored as a string
+        # (see kiosk_sharepoint_articles.py) - every other model here uses an int BIGINT id.
+        pk_values = [str(i) for i in ids] if r_type == "sharepoint-article" else list(ids)
+        found = db.execute(select(model.id, getattr(model, title_attr)).where(model.id.in_(pk_values))).all()
+        for item_id, title in found:
+            titles[(r_type, int(item_id))] = title
+    return titles
 
 
 @router.post(
@@ -63,12 +114,16 @@ def report_top_sections(
     date_from: date | None = None, date_to: date | None = None, db: Session = Depends(get_db)
 ) -> list[ActivityCountItem]:
     try:
-        query = select(ActivityLog.resource_type, func.count().label("count")).where(ActivityLog.resource_type.is_not(None))
+        query = select(ActivityLog.resource_type, func.count().label("count")).where(
+            ActivityLog.resource_type.is_not(None),
+            ActivityLog.resource_type.not_in(EXCLUDED_SECTIONS),
+            ActivityLog.action_type == ActionType.PAGE_VIEW,
+        )
         for condition in _date_range_filter(date_from, date_to):
             query = query.where(condition)
         query = query.group_by(ActivityLog.resource_type).order_by(func.count().desc())
         rows = db.execute(query).all()
-        return [ActivityCountItem(key=row.resource_type, count=row.count) for row in rows]
+        return [ActivityCountItem(key=row.resource_type, count=row._mapping["count"]) for row in rows]
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build top-sections report.")
@@ -90,10 +145,52 @@ def report_top_actions(
             query = query.where(condition)
         query = query.group_by(ActivityLog.action_type).order_by(func.count().desc())
         rows = db.execute(query).all()
-        return [ActivityCountItem(key=row.action_type, count=row.count) for row in rows]
+        return [ActivityCountItem(key=row.action_type, count=row._mapping["count"]) for row in rows]
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build top-actions report.")
+
+
+@router.get(
+    "/report/top-items",
+    status_code=status.HTTP_200_OK,
+    name="Activity Report - Top Items",
+    dependencies=[Depends(get_admin_user)],
+    response_model=list[ActivityItemCountItem],
+)
+def report_top_items(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    resource_type: str | None = None,
+    limit: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> list[ActivityItemCountItem]:
+    if resource_type is not None and resource_type not in ITEM_TITLE_MODELS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported resource_type for item breakdown.")
+    try:
+        allowed_types = [resource_type] if resource_type else list(ITEM_TITLE_MODELS)
+        query = select(ActivityLog.resource_type, ActivityLog.resource_id, func.count().label("count")).where(
+            ActivityLog.resource_type.in_(allowed_types), ActivityLog.resource_id.is_not(None)
+        )
+        for condition in _date_range_filter(date_from, date_to):
+            query = query.where(condition)
+        query = query.group_by(ActivityLog.resource_type, ActivityLog.resource_id).order_by(func.count().desc()).limit(limit)
+        rows = db.execute(query).all()
+        titles = _resolve_item_titles(db, rows)
+        return [
+            ActivityItemCountItem(
+                resource_type=row.resource_type,
+                resource_id=row.resource_id,
+                title=titles.get((row.resource_type, row.resource_id), f"Smazaná položka #{row.resource_id}"),
+                count=row._mapping["count"],
+            )
+            for row in rows
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build top-items report.")
 
 
 @router.get(
@@ -112,6 +209,7 @@ def report_top_devices(
     try:
         query = select(
             ActivityLog.device_id,
+            func.max(ActivityLog.ip_address).label("ip_address"),
             func.max(ActivityLog.device_name).label("device_name"),
             func.count().label("count"),
         ).where(ActivityLog.device_id.is_not(None))
@@ -119,7 +217,12 @@ def report_top_devices(
             query = query.where(condition)
         query = query.group_by(ActivityLog.device_id).order_by(func.count().desc()).limit(limit)
         rows = db.execute(query).all()
-        return [ActivityDeviceCountItem(device_id=row.device_id, device_name=row.device_name, count=row.count) for row in rows]
+        return [
+            ActivityDeviceCountItem(
+                device_id=row.device_id, ip_address=row.ip_address, device_name=row.device_name, count=row._mapping["count"]
+            )
+            for row in rows
+        ]
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build top-devices report.")
@@ -150,7 +253,7 @@ def report_timeseries(
             query = query.where(condition)
         query = query.group_by("bucket").order_by("bucket")
         rows = db.execute(query).all()
-        return [ActivityCountItem(key=row.bucket, count=row.count) for row in rows]
+        return [ActivityCountItem(key=row.bucket, count=row._mapping["count"]) for row in rows]
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build timeseries report.")
@@ -166,7 +269,7 @@ def _summary_for_range(db: Session, date_from: date | None, date_to: date | None
 
     top_resource_query = (
         select(ActivityLog.resource_type)
-        .where(ActivityLog.resource_type.is_not(None))
+        .where(ActivityLog.resource_type.is_not(None), ActivityLog.resource_type.not_in(EXCLUDED_SECTIONS))
         .group_by(ActivityLog.resource_type)
         .order_by(func.count().desc())
         .limit(1)

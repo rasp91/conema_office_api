@@ -2,17 +2,31 @@ import uuid
 import os
 
 from pydantic import BaseModel
-from fastapi import status, HTTPException, UploadFile, APIRouter
+from fastapi import status, HTTPException, UploadFile, APIRouter, Depends
 
-from src.upload import make_thumbnail, save_upload, ALLOWED_IMAGE_TYPES, IMAGE_EXTENSIONS, FILE_EXTENSIONS, MAX_IMAGE_SIZE, MAX_FILE_SIZE
+from src.upload import (
+    make_thumbnail,
+    save_upload,
+    delete_file,
+    ALLOWED_IMAGE_TYPES,
+    IMAGE_EXTENSIONS,
+    FILE_EXTENSIONS,
+    MAX_IMAGE_SIZE,
+    MAX_FILE_SIZE,
+)
 from src.logger import app_logger
 from src.config import config
+from src.auth import get_auth_user
 
 router = APIRouter()
 
 
 class UploadResponse(BaseModel):
     path: str
+
+
+class ResponseModel(BaseModel):
+    success: bool = True
 
 
 @router.post(
@@ -83,3 +97,16 @@ def upload_file(file: UploadFile, subdir: str = "news/files") -> UploadResponse:
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upload file.")
+
+
+@router.delete(
+    "",
+    status_code=status.HTTP_200_OK,
+    name="Delete Uploaded File",
+    response_model=ResponseModel,
+    dependencies=[Depends(get_auth_user)],
+)
+def delete_uploaded_file(path: str) -> ResponseModel:
+    """Delete a previously uploaded file by its relative path. Requires authentication."""
+    delete_file(path)
+    return ResponseModel()
