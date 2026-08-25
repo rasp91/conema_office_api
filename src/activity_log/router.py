@@ -25,8 +25,8 @@ from src.activity_log.schemas import (
 from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.logger import app_logger
-from src.auth import get_admin_user
 from src.enums import ResourceType, ActionType
+from src.auth import get_auth_user
 
 router = APIRouter()
 
@@ -107,7 +107,7 @@ def _date_range_filter(date_from: date | None, date_to: date | None) -> list:
     "/report/top-sections",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Top Sections",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[ActivityCountItem],
 )
 def report_top_sections(
@@ -133,7 +133,7 @@ def report_top_sections(
     "/report/top-actions",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Top Actions",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[ActivityCountItem],
 )
 def report_top_actions(
@@ -155,7 +155,7 @@ def report_top_actions(
     "/report/top-items",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Top Items",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[ActivityItemCountItem],
 )
 def report_top_items(
@@ -197,7 +197,7 @@ def report_top_items(
     "/report/top-devices",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Top Devices",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[ActivityDeviceCountItem],
 )
 def report_top_devices(
@@ -232,7 +232,7 @@ def report_top_devices(
     "/report/timeseries",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Timeseries",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=list[ActivityCountItem],
 )
 def report_timeseries(
@@ -291,7 +291,7 @@ def _summary_for_range(db: Session, date_from: date | None, date_to: date | None
     "/report/summary",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Summary",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=ActivitySummaryModel,
 )
 def report_summary(date_from: date | None = None, date_to: date | None = None, db: Session = Depends(get_db)) -> ActivitySummaryModel:
@@ -318,7 +318,7 @@ def report_summary(date_from: date | None = None, date_to: date | None = None, d
     "/report/logs",
     status_code=status.HTTP_200_OK,
     name="Activity Report - Logs",
-    dependencies=[Depends(get_admin_user)],
+    dependencies=[Depends(get_auth_user)],
     response_model=PaginatedActivityLogsModel,
 )
 def report_logs(
