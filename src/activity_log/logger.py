@@ -5,13 +5,26 @@ from src.database.models.activity_logs import ActivityLog
 from src.logger import app_logger
 
 
+def _strip_port(value: str) -> str:
+    """Strip a trailing :port from an IPv4/IPv6 address, if present."""
+    value = value.strip()
+    if value.startswith("["):
+        # Bracketed IPv6, e.g. "[::1]:8080" or "[::1]"
+        end = value.find("]")
+        return value[1:end] if end != -1 else value
+    if value.count(":") == 1:
+        # IPv4:port (bare IPv6 has more than one colon and is left untouched)
+        return value.split(":")[0]
+    return value
+
+
 def extract_ip(request: Request) -> str | None:
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
         # X-Forwarded-For may hold a comma-separated chain (client, proxy1, proxy2, ...) — first entry is the client.
-        return forwarded_for.split(",")[0].strip()
+        return _strip_port(forwarded_for.split(",")[0])
     if request.client:
-        return request.client.host
+        return _strip_port(request.client.host)
     return None
 
 
