@@ -1,4 +1,5 @@
 from datetime import timedelta, date
+import socket
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_
@@ -99,6 +100,21 @@ def log_kiosk_activity(data: ActivityLogCreateModel, request: Request, db: Sessi
         path=data.path,
     )
     return ResponseModel()
+
+
+def _resolve_hostname(ip: str) -> str | None:
+    """Best-effort reverse DNS (PTR) lookup for a device's IP. Returns None on any failure — no
+    PTR record, DNS server unreachable, malformed IP — so a lookup issue never breaks the report.
+
+    Runs on the endpoint's own request thread (FastAPI executes sync routes in a threadpool), so a
+    slow/unresponsive DNS server only stalls that one request rather than the whole app. On a
+    corporate LAN with internal DNS this is normally a few ms per device; if it turns out to be
+    slow for external/unregistered IPs, consider caching results or dropping this lookup.
+    """
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except (socket.herror, socket.gaierror, OSError):
+        return None
 
 
 def _date_range_filter(date_from: date | None, date_to: date | None) -> list:
@@ -216,18 +232,22 @@ def report_top_devices(
 ) -> list[ActivityDeviceCountItem]:
     try:
         query = select(
-            ActivityLog.device_id,
-            func.max(ActivityLog.ip_address).label("ip_address"),
+            ActivityLog.ip_address,
+            func.max(ActivityLog.device_id).label("device_id"),
             func.max(ActivityLog.device_name).label("device_name"),
             func.count().label("count"),
-        ).where(ActivityLog.device_id.is_not(None))
+        ).where(ActivityLog.ip_address.is_not(None))
         for condition in _date_range_filter(date_from, date_to):
             query = query.where(condition)
-        query = query.group_by(ActivityLog.device_id).order_by(func.count().desc()).limit(limit)
+        query = query.group_by(ActivityLog.ip_address).order_by(func.count().desc()).limit(limit)
         rows = db.execute(query).all()
         return [
             ActivityDeviceCountItem(
-                device_id=row.device_id, ip_address=row.ip_address, device_name=row.device_name, count=row._mapping["count"]
+                device_id=row.device_id,
+                ip_address=row.ip_address,
+                device_name=row.device_name,
+                domain_name=_resolve_hostname(row.ip_address),
+                count=row._mapping["count"],
             )
             for row in rows
         ]

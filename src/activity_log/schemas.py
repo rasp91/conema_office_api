@@ -34,9 +34,10 @@ class ActivityCountItem(BaseModel):
 
 
 class ActivityDeviceCountItem(BaseModel):
-    ip_address: str | None = None
-    device_id: str
+    ip_address: str
+    device_id: str | None = None
     device_name: str | None = None
+    domain_name: str | None = None
     count: int
 
 
