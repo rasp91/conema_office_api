@@ -1,7 +1,7 @@
 from datetime import timedelta, date
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from fastapi import status, HTTPException, APIRouter, Request, Depends, Query
 
 from src.database.models.kiosk_sharepoint_articles import SharePointArticle
@@ -35,6 +35,14 @@ router = APIRouter()
 # Excluded from the section breakdowns/top-section summary below rather than from logging
 # itself, so the raw event is still recorded and visible in the log listing.
 EXCLUDED_SECTIONS = (ResourceType.HOME, ResourceType.DOCUMENT)
+
+
+def _noise_filter(excluded=EXCLUDED_SECTIONS):
+    """Excludes the given resource_types (default: EXCLUDED_SECTIONS), but stays safe for queries
+    that must still count rows with no resource_type at all (e.g. non-page_view events) — NULL
+    never matches NOT IN."""
+    return or_(ActivityLog.resource_type.is_(None), ActivityLog.resource_type.not_in(excluded))
+
 
 # resource_type -> (ORM model, title column) for the "view_detail" events that carry a
 # resource_id pointing at an actual content item. Keys mirror the singular resource_type
@@ -140,7 +148,7 @@ def report_top_actions(
     date_from: date | None = None, date_to: date | None = None, db: Session = Depends(get_db)
 ) -> list[ActivityCountItem]:
     try:
-        query = select(ActivityLog.action_type, func.count().label("count"))
+        query = select(ActivityLog.action_type, func.count().label("count")).where(_noise_filter((ResourceType.HOME,)))
         for condition in _date_range_filter(date_from, date_to):
             query = query.where(condition)
         query = query.group_by(ActivityLog.action_type).order_by(func.count().desc())
@@ -248,7 +256,7 @@ def report_timeseries(
             bucket_expr = func.date_format(ActivityLog.created_at, "%Y-%m")
         else:
             bucket_expr = func.date_format(ActivityLog.created_at, "%Y-%m-%d")
-        query = select(bucket_expr.label("bucket"), func.count().label("count"))
+        query = select(bucket_expr.label("bucket"), func.count().label("count")).where(_noise_filter())
         for condition in _date_range_filter(date_from, date_to):
             query = query.where(condition)
         query = query.group_by("bucket").order_by("bucket")
@@ -262,10 +270,16 @@ def report_timeseries(
 def _summary_for_range(db: Session, date_from: date | None, date_to: date | None) -> ActivitySummaryPeriod:
     conditions = _date_range_filter(date_from, date_to)
 
-    count_query = select(func.count(), func.count(func.distinct(ActivityLog.device_id)))
+    # total_events excludes just the "home" noise (unlike the section/timeseries reports, "document"
+    # events still count here); unique_devices intentionally excludes nothing, so a kiosk that only
+    # ever pinged "home" still counts as an active device.
+    total_events_query = select(func.count()).where(_noise_filter((ResourceType.HOME,)))
+    unique_devices_query = select(func.count(func.distinct(ActivityLog.device_id)))
     for condition in conditions:
-        count_query = count_query.where(condition)
-    total_events, unique_devices = db.execute(count_query).one()
+        total_events_query = total_events_query.where(condition)
+        unique_devices_query = unique_devices_query.where(condition)
+    total_events = db.execute(total_events_query).scalar_one()
+    unique_devices = db.execute(unique_devices_query).scalar_one()
 
     top_resource_query = (
         select(ActivityLog.resource_type)
@@ -340,11 +354,12 @@ def report_logs(
         if device_id is not None:
             conditions.append(ActivityLog.device_id == device_id)
 
-        count_query = select(func.count()).select_from(ActivityLog)
+        count_query = select(func.count()).select_from(ActivityLog).where(_noise_filter((ResourceType.HOME,)))
         rows_query = select(ActivityLog).order_by(ActivityLog.created_at.desc())
         for condition in conditions:
             count_query = count_query.where(condition)
             rows_query = rows_query.where(condition)
+        rows_query = rows_query.where(_noise_filter((ResourceType.HOME,)))
         rows_query = rows_query.offset((page - 1) * page_size).limit(page_size)
 
         total = db.execute(count_query).scalar_one()
