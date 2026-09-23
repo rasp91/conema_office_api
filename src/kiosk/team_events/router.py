@@ -118,13 +118,15 @@ def update_team_event(team_event_id: int, data: TeamEventUpdateModel, db: Sessio
         if data.is_visible is not None:
             item.is_visible = data.is_visible
         # Allow explicitly setting thumbnail_path to None (removal)
+        stale_file = None
         if "thumbnail_path" in data.model_fields_set:
-            # Delete old thumbnail if being replaced or cleared
+            # Old thumbnail is removed from disk only after the commit succeeds
             if item.thumbnail_path and item.thumbnail_path != data.thumbnail_path:
-                delete_file(item.thumbnail_path)
+                stale_file = item.thumbnail_path
             item.thumbnail_path = data.thumbnail_path
 
         db.commit()
+        delete_file(stale_file)
         db.refresh(item)
         return item
     except HTTPException:
@@ -145,15 +147,13 @@ def delete_team_event(team_event_id: int, db: Session = Depends(get_db)) -> Resp
     try:
         item = _get_team_event_or_404(team_event_id, db)
 
-        # Delete all associated files from disk
-        if item.thumbnail_path:
-            delete_file(item.thumbnail_path)
-        for doc in item.documents:
-            if doc.type != DocumentType.YOUTUBE:
-                delete_file(doc.file_path)
+        # Collect files first, remove them from disk only once the DB delete is committed
+        files = [item.thumbnail_path] + [doc.file_path for doc in item.documents if doc.type != DocumentType.YOUTUBE]
 
         db.delete(item)
         db.commit()
+        for file_path in files:
+            delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise
@@ -170,7 +170,10 @@ def delete_team_event(team_event_id: int, db: Session = Depends(get_db)) -> Resp
 )
 def increment_views(team_event_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        result = db.execute(update(TeamEvent).where(TeamEvent.id == team_event_id).values(views=TeamEvent.views + 1))
+        # updated_at is pinned to itself so a view doesn't count as an edit (ORM onupdate would bump it)
+        result = db.execute(
+            update(TeamEvent).where(TeamEvent.id == team_event_id).values(views=TeamEvent.views + 1, updated_at=TeamEvent.updated_at)
+        )
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team event not found.")
         db.commit()
@@ -226,10 +229,10 @@ def delete_document(team_event_id: int, doc_id: int, db: Session = Depends(get_d
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        if doc.type != DocumentType.YOUTUBE:
-            delete_file(doc.file_path)
+        file_path = doc.file_path if doc.type != DocumentType.YOUTUBE else None
         db.delete(doc)
         db.commit()
+        delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise

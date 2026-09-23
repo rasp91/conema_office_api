@@ -12,8 +12,8 @@ class TeamEvent(Base):
     __tablename__ = "kiosk_team_events"
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
-    updated_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime.datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
     date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(LONGTEXT, nullable=False)

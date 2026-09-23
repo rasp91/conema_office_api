@@ -1,19 +1,23 @@
 import socket
+from collections.abc import Iterable
 from datetime import timedelta, date
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, SQLColumnExpression
 from fastapi import status, HTTPException, APIRouter, Request, Depends, Query
 
 from src.database.models.kiosk_sharepoint_articles import SharePointArticle
 from src.database.models.kiosk_internal_info_items import InternalInfoItem
 from src.database.models.kiosk_presentation_items import PresentationItem
 from src.database.models.kiosk_possibilist_items import PossibilistItem
-from src.database.models.kiosk_news_items import NewsItem
+from src.database.models.activity_device_aliases import ActivityDeviceAlias
+from src.database.models.kiosk_team_members import TeamMember
 from src.database.models.kiosk_team_events import TeamEvent
+from src.database.models.kiosk_news_items import NewsItem
 from src.database.models.activity_logs import ActivityLog
 from src.database.models.kiosk_events import KioskEvent
 from src.activity_log.schemas import (
+    ActivityDeviceAliasUpdateModel,
     PaginatedActivityLogsModel,
     ActivityDeviceCountItem,
     ActivityLogCreateModel,
@@ -46,19 +50,21 @@ def _noise_filter(excluded=EXCLUDED_SECTIONS):
     return or_(ActivityLog.resource_type.is_(None), ActivityLog.resource_type.not_in(excluded))
 
 
-# resource_type -> (ORM model, title column) for the "view_detail" events that carry a
+# resource_type -> (ORM model, title expression) for the "view_detail" events that carry a
 # resource_id pointing at an actual content item. Keys mirror the singular resource_type
 # strings written by each kiosk detail endpoint's log_activity() call (see e.g.
 # src/kiosk/news/router.py) — distinct from the plural route-name strings page_view logs
-# for the top-sections breakdown above.
-ITEM_TITLE_MODELS: dict[str, tuple[type, str]] = {
-    ResourceType.NEWS: (NewsItem, "title"),
-    ResourceType.EVENT: (KioskEvent, "title"),
-    ResourceType.INTERNAL_INFO: (InternalInfoItem, "title"),
-    ResourceType.POSSIBILIST: (PossibilistItem, "title"),
-    ResourceType.PRESENTATION: (PresentationItem, "title"),
-    ResourceType.SHAREPOINT_ARTICLE: (SharePointArticle, "title"),
-    ResourceType.TEAM_EVENT: (TeamEvent, "title"),
+# for the top-sections breakdown above. The title is a SQL expression rather than a column
+# name so items without a single title column (team members) can build one from their fields.
+ITEM_TITLE_MODELS: dict[str, tuple[type, SQLColumnExpression[str]]] = {
+    ResourceType.NEWS: (NewsItem, NewsItem.title),
+    ResourceType.EVENT: (KioskEvent, KioskEvent.title),
+    ResourceType.INTERNAL_INFO: (InternalInfoItem, InternalInfoItem.title),
+    ResourceType.POSSIBILIST: (PossibilistItem, PossibilistItem.title),
+    ResourceType.PRESENTATION: (PresentationItem, PresentationItem.title),
+    ResourceType.SHAREPOINT_ARTICLE: (SharePointArticle, SharePointArticle.title),
+    ResourceType.TEAM_EVENT: (TeamEvent, TeamEvent.title),
+    ResourceType.TEAM_MEMBER: (TeamMember, func.concat(TeamMember.first_name, " ", TeamMember.last_name)),
 }
 
 
@@ -75,11 +81,11 @@ def _resolve_item_titles(db: Session, rows) -> dict[tuple[str, int], str]:
 
     titles: dict[tuple[str, int], str] = {}
     for r_type, ids in ids_by_type.items():
-        model, title_attr = ITEM_TITLE_MODELS[r_type]
+        model, title_expr = ITEM_TITLE_MODELS[r_type]
         # SharePointArticle's primary key is the SharePoint list item id stored as a string
         # (see kiosk_sharepoint_articles.py) - every other model here uses an int BIGINT id.
-        pk_values = [str(i) for i in ids] if r_type == "sharepoint-article" else list(ids)
-        found = db.execute(select(model.id, getattr(model, title_attr)).where(model.id.in_(pk_values))).all()
+        pk_values = [str(i) for i in ids] if r_type == ResourceType.SHAREPOINT_ARTICLE else list(ids)
+        found = db.execute(select(model.id, title_expr).where(model.id.in_(pk_values))).all()
         for item_id, title in found:
             titles[(r_type, int(item_id))] = title
     return titles
@@ -117,6 +123,17 @@ def _resolve_hostname(ip: str) -> str | None:
         return socket.gethostbyaddr(ip)[0]
     except (socket.herror, socket.gaierror, OSError):
         return None
+
+
+def _device_aliases(db: Session, ips: Iterable[str | None]) -> dict[str, str]:
+    """Admin-defined display names (activity_device_aliases) for the given IPs, in one query."""
+    unique_ips = {ip for ip in ips if ip}
+    if not unique_ips:
+        return {}
+    rows = db.execute(
+        select(ActivityDeviceAlias.ip_address, ActivityDeviceAlias.name).where(ActivityDeviceAlias.ip_address.in_(unique_ips))
+    ).all()
+    return {ip: name for ip, name in rows}
 
 
 def _date_range_filter(date_from: date | None, date_to: date | None) -> list:
@@ -243,12 +260,14 @@ def report_top_devices(
             query = query.where(condition)
         query = query.group_by(ActivityLog.ip_address).order_by(func.count().desc()).limit(limit)
         rows = db.execute(query).all()
+        aliases = _device_aliases(db, (row.ip_address for row in rows))
         return [
             ActivityDeviceCountItem(
                 device_id=row.device_id,
                 ip_address=row.ip_address,
                 device_name=row.device_name,
                 domain_name=_resolve_hostname(row.ip_address),
+                custom_name=aliases.get(row.ip_address),
                 count=row._mapping["count"],
             )
             for row in rows
@@ -386,9 +405,44 @@ def report_logs(
 
         total = db.execute(count_query).scalar_one()
         rows = db.execute(rows_query).scalars().all()
-        return PaginatedActivityLogsModel(
-            items=[ActivityLogItemModel.model_validate(row) for row in rows], total=total, page=page, page_size=page_size
-        )
+        aliases = _device_aliases(db, (row.ip_address for row in rows))
+        items = [
+            ActivityLogItemModel.model_validate(row).model_copy(
+                update={"device_alias": aliases.get(row.ip_address) if row.ip_address else None}
+            )
+            for row in rows
+        ]
+        return PaginatedActivityLogsModel(items=items, total=total, page=page, page_size=page_size)
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to build activity log listing.")
+
+
+@router.put(
+    "/device-aliases",
+    status_code=status.HTTP_200_OK,
+    name="Set Device Alias",
+    dependencies=[Depends(get_auth_user)],
+    response_model=ResponseModel,
+)
+def set_device_alias(data: ActivityDeviceAliasUpdateModel, db: Session = Depends(get_db)) -> ResponseModel:
+    """Creates, renames or (with an empty name) removes the display name for a device IP."""
+    try:
+        ip = data.ip_address.strip()
+        name = (data.name or "").strip()
+        alias = db.execute(select(ActivityDeviceAlias).where(ActivityDeviceAlias.ip_address == ip)).scalar_one_or_none()
+
+        if not name:
+            if alias:
+                db.delete(alias)
+        elif alias:
+            alias.name = name
+        else:
+            db.add(ActivityDeviceAlias(ip_address=ip, name=name))
+
+        db.commit()
+        return ResponseModel()
+    except Exception as e:
+        app_logger.exception(e)
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save device name.")

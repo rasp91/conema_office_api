@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class PresentationCategoryModel(BaseModel):
@@ -10,11 +10,17 @@ class PresentationCategoryModel(BaseModel):
 
 
 class PresentationCategoryCreateModel(BaseModel):
-    name: str
+    # " " must not pass min_length=1 and stray spaces shouldn't be stored
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=255)
 
 
 class PresentationCategoryUpdateModel(BaseModel):
-    name: str | None = None
+    # " " must not pass min_length=1 and stray spaces shouldn't be stored
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class ResponseModel(BaseModel):

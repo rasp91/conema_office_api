@@ -1,6 +1,6 @@
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select, func
-from fastapi import status, HTTPException, APIRouter, Depends, Request
+from sqlalchemy import update, select, func
+from fastapi import status, HTTPException, APIRouter, Request, Depends
 
 from src.database.models.kiosk_presentation_documents import PresentationDocument
 from src.database.models.kiosk_presentation_items import PresentationItem
@@ -17,7 +17,7 @@ from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
-from src.enums import ResourceType, ActionType, DocumentType
+from src.enums import ResourceType, DocumentType, ActionType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -123,13 +123,16 @@ def update_presentation(presentation_id: int, data: PresentationItemUpdateModel,
             item.is_visible = data.is_visible
         if "category_id" in data.model_fields_set:
             item.category_id = data.category_id
+        stale_file = None
         # Allow explicitly setting thumbnail_path to None (removal)
         if "thumbnail_path" in data.model_fields_set:
+            # Old file is removed from disk only after the commit succeeds
             if item.thumbnail_path and item.thumbnail_path != data.thumbnail_path:
-                delete_file(item.thumbnail_path)
+                stale_file = item.thumbnail_path
             item.thumbnail_path = data.thumbnail_path
 
         db.commit()
+        delete_file(stale_file)
         db.refresh(item)
         return item
     except HTTPException:
@@ -150,14 +153,13 @@ def delete_presentation(presentation_id: int, db: Session = Depends(get_db)) -> 
     try:
         item = get_presentation_or_404(presentation_id, db)
 
-        if item.thumbnail_path:
-            delete_file(item.thumbnail_path)
-        for doc in item.documents:
-            if doc.type != DocumentType.YOUTUBE:
-                delete_file(doc.file_path)
+        # Collect files first, remove them from disk only once the DB delete is committed
+        files = [item.thumbnail_path] + [doc.file_path for doc in item.documents if doc.type != DocumentType.YOUTUBE]
 
         db.delete(item)
         db.commit()
+        for file_path in files:
+            delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise
@@ -174,10 +176,14 @@ def delete_presentation(presentation_id: int, db: Session = Depends(get_db)) -> 
 )
 def increment_views(presentation_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        item = db.execute(select(PresentationItem).where(PresentationItem.id == presentation_id)).scalar_one_or_none()
-        if not item:
+        # updated_at is pinned to itself so a view doesn't count as an edit (ORM onupdate would bump it)
+        result = db.execute(
+            update(PresentationItem)
+            .where(PresentationItem.id == presentation_id)
+            .values(views=PresentationItem.views + 1, updated_at=PresentationItem.updated_at)
+        )
+        if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Presentation not found.")
-        item.views = (item.views or 0) + 1
         db.commit()
         log_activity(db, request, ActionType.VIEW_DETAIL, ResourceType.PRESENTATION, presentation_id)
         return ResponseModel()
@@ -234,10 +240,10 @@ def delete_document(presentation_id: int, doc_id: int, db: Session = Depends(get
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        if doc.type != DocumentType.YOUTUBE:
-            delete_file(doc.file_path)
+        file_path = doc.file_path if doc.type != DocumentType.YOUTUBE else None
         db.delete(doc)
         db.commit()
+        delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.dialects.mysql import LONGTEXT, BIGINT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, relationship, Mapped
@@ -11,12 +13,12 @@ class Form(Base):
     __tablename__ = "forms"
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
     created_by: Mapped[int] = mapped_column(BIGINT(unsigned=True), ForeignKey("users.id"), nullable=False)
-    updated_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
     updated_by: Mapped[int] = mapped_column(BIGINT(unsigned=True), ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    content: Mapped[str] = mapped_column(LONGTEXT, nullable=True)
+    content: Mapped[str | None] = mapped_column(LONGTEXT, nullable=True)
 
     # Add two separate relationships, one for each FK
     creator = relationship(User, foreign_keys=[created_by], backref="created_forms")

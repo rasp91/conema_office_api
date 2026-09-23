@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.dialects.mysql import LONGTEXT, BIGINT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, relationship, Mapped
@@ -10,8 +12,8 @@ class KioskEvent(Base):
     __tablename__ = "kiosk_events"
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
-    updated_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
     date: Mapped[str] = mapped_column(Date, nullable=False)
     time: Mapped[str] = mapped_column(String(5), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)

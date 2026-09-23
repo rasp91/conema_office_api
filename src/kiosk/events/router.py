@@ -18,9 +18,8 @@ from src.activity_log.logger import log_activity
 from src.kiosk.events import get_event_or_404
 from src.database import get_db
 from src.upload import delete_file
-from src.enums import ResourceType, ActionType
 from src.logger import app_logger
-from src.enums import DocumentType
+from src.enums import ResourceType, DocumentType, ActionType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -122,12 +121,15 @@ def update_event(event_id: int, data: EventUpdateModel, db: Session = Depends(ge
             item.description = data.description
         if data.is_visible is not None:
             item.is_visible = data.is_visible
+        stale_file = None
         if "thumbnail_path" in data.model_fields_set:
+            # Old file is removed from disk only after the commit succeeds
             if item.thumbnail_path and item.thumbnail_path != data.thumbnail_path:
-                delete_file(item.thumbnail_path)
+                stale_file = item.thumbnail_path
             item.thumbnail_path = data.thumbnail_path
 
         db.commit()
+        delete_file(stale_file)
         db.refresh(item)
         return item
     except HTTPException:
@@ -148,14 +150,13 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
     try:
         item = get_event_or_404(event_id, db)
 
-        if item.thumbnail_path:
-            delete_file(item.thumbnail_path)
-        for doc in item.documents:
-            if doc.type != DocumentType.YOUTUBE:
-                delete_file(doc.file_path)
+        # Collect files first, remove them from disk only once the DB delete is committed
+        files = [item.thumbnail_path] + [doc.file_path for doc in item.documents if doc.type != DocumentType.YOUTUBE]
 
         db.delete(item)
         db.commit()
+        for file_path in files:
+            delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise
@@ -172,7 +173,10 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> ResponseModel:
 )
 def increment_views(event_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        result = db.execute(update(KioskEvent).where(KioskEvent.id == event_id).values(views=KioskEvent.views + 1))
+        # updated_at is pinned to itself so a view doesn't count as an edit (ORM onupdate would bump it)
+        result = db.execute(
+            update(KioskEvent).where(KioskEvent.id == event_id).values(views=KioskEvent.views + 1, updated_at=KioskEvent.updated_at)
+        )
         if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found.")
         db.commit()
@@ -226,10 +230,10 @@ def delete_document(event_id: int, doc_id: int, db: Session = Depends(get_db)) -
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        if doc.type != DocumentType.YOUTUBE:
-            delete_file(doc.file_path)
+        file_path = doc.file_path if doc.type != DocumentType.YOUTUBE else None
         db.delete(doc)
         db.commit()
+        delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise

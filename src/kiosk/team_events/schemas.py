@@ -1,7 +1,7 @@
 import datetime
 import re
 
-from pydantic import model_validator, BaseModel
+from pydantic import model_validator, ConfigDict, BaseModel, Field
 
 from src.enums import DocumentType
 
@@ -32,24 +32,33 @@ class TeamEventModel(BaseModel):
 
 
 class TeamEventCreateModel(BaseModel):
+    # " " must not pass min_length=1 and stray spaces shouldn't be stored
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     date: datetime.date
-    title: str
+    title: str = Field(min_length=1, max_length=255)
     description: str
-    thumbnail_path: str | None = None
+    thumbnail_path: str | None = Field(default=None, max_length=500)
     is_visible: bool = True
 
 
 class TeamEventUpdateModel(BaseModel):
+    # " " must not pass min_length=1 and stray spaces shouldn't be stored
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     date: datetime.date | None = None
-    title: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
-    thumbnail_path: str | None = None
+    thumbnail_path: str | None = Field(default=None, max_length=500)
     is_visible: bool | None = None
 
 
 class TeamEventDocumentCreateModel(BaseModel):
-    name: str
-    file_path: str
+    # " " must not pass min_length=1 and stray spaces shouldn't be stored
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=255)
+    file_path: str = Field(max_length=500)
     type: DocumentType
     sort_order: int = 0
 

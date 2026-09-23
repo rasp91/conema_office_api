@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.sql import func
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy import String, Text, TIMESTAMP
@@ -11,12 +13,12 @@ class SharePointArticle(Base):
     # The SharePoint list item id itself is the primary key (not an autoincrement BIGINT like
     # other models here) since every sync upserts by this natural key from the external system.
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
-    updated_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    published_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=True)
-    icon_path: Mapped[str] = mapped_column(String(500), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
+    icon_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # SharePoint's "Division" is a multi-select choice field (~3.6% of articles carry more
     # than one), so it's normalized into kiosk_sharepoint_article_divisions rather than a

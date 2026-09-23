@@ -4,6 +4,7 @@ from starlette.requests import Request
 from fastapi.responses import JSONResponse
 from fastapi import status, FastAPI, Depends
 
+from src.logger import app_logger
 from src.config import config
 from src.auth import verify_api_key
 
@@ -30,6 +31,8 @@ app.add_middleware(
 # Generic HTTPException handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # Without this, anything not caught inside a route (e.g. in a dependency) leaves no trace in the logs
+    app_logger.exception(f"Unhandled error on {request.method} {request.url.path}", exc_info=exc)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -48,12 +51,12 @@ from src.kiosk.presentation_categories.router import router as presentation_cate
 from src.kiosk.possibilist_categories.router import router as possibilist_categories_router
 from src.kiosk.presentations.router import router as presentations_router
 from src.kiosk.internal_info.router import router as internal_info_router
+from src.kiosk.team_members.router import router as team_members_router
 from src.kiosk.possibilists.router import router as possibilists_router
+from src.kiosk.team_events.router import router as team_events_router
 from src.kiosk.sharepoint.router import router as sharepoint_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
-from src.kiosk.team_members.router import router as team_members_router
-from src.kiosk.team_events.router import router as team_events_router
 from src.activity_log.router import router as activity_log_router
 from src.kiosk.news.router import router as news_router
 from src.v1.forms.router import router as forms_router

@@ -85,8 +85,8 @@ def save_upload(file: UploadFile, subdir: str, allowed_types: dict[str, str], ma
     return f"{subdir}/{filename}"
 
 
-def delete_file(relative_path: str) -> None:
-    """Delete a file from DATA_PATH by its relative path. Silently ignores missing files."""
+def delete_file(relative_path: str | None) -> None:
+    """Delete a file from DATA_PATH by its relative path. Silently ignores missing files and empty/None paths."""
     if not relative_path:
         return
     data_root = os.path.realpath(config.DATA_PATH)

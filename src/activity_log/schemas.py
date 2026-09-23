@@ -1,7 +1,7 @@
-from datetime import datetime
 import json
+from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import field_validator, BaseModel, Field
 
 # Keep in sync with the activity_logs table column widths (src/database/models/activity_logs.py) -
 # values that don't fit are rejected here with a 422 instead of silently failing on commit inside
@@ -38,6 +38,8 @@ class ActivityDeviceCountItem(BaseModel):
     device_id: str | None = None
     device_name: str | None = None
     domain_name: str | None = None
+    # Admin-defined display name for this IP (activity_device_aliases), if any
+    custom_name: str | None = None
     count: int
 
 
@@ -72,6 +74,8 @@ class ActivityLogItemModel(BaseModel):
     resource_id: int | None = None
     path: str | None = None
     meta: dict | None = None
+    # Admin-defined display name for this row's IP (activity_device_aliases), filled in by the router
+    device_alias: str | None = None
 
     class Config:
         from_attributes = True
@@ -82,3 +86,9 @@ class PaginatedActivityLogsModel(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ActivityDeviceAliasUpdateModel(BaseModel):
+    ip_address: str = Field(min_length=1, max_length=45)
+    # Empty / null name removes the alias (the device falls back to its default label)
+    name: str | None = Field(default=None, max_length=100)

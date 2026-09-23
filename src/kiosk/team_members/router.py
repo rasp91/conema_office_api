@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
-from fastapi import status, HTTPException, APIRouter, Depends
+from sqlalchemy import update, select
+from fastapi import status, HTTPException, APIRouter, Request, Depends
 
 from src.database.models.kiosk_team_members import TeamMember
 from src.kiosk.team_members.schemas import (
@@ -11,9 +11,11 @@ from src.kiosk.team_members.schemas import (
     TeamMemberModel,
     ResponseModel,
 )
+from src.activity_log.logger import log_activity
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
+from src.enums import ResourceType, ActionType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -113,13 +115,15 @@ def update_team_member(member_id: int, data: TeamMemberUpdateModel, db: Session 
             item.position = data.position
         if "bio" in data.model_fields_set:
             item.bio = data.bio
+        stale_file = None
         if "photo_path" in data.model_fields_set:
-            # Delete old photo if being replaced or cleared
+            # Old photo is removed from disk only after the commit succeeds
             if item.photo_path and item.photo_path != data.photo_path:
-                delete_file(item.photo_path)
+                stale_file = item.photo_path
             item.photo_path = data.photo_path
 
         db.commit()
+        delete_file(stale_file)
         db.refresh(item)
         return item
     except HTTPException:
@@ -140,14 +144,37 @@ def delete_team_member(member_id: int, db: Session = Depends(get_db)) -> Respons
     try:
         item = _get_team_member_or_404(member_id, db)
 
-        if item.photo_path:
-            delete_file(item.photo_path)
-
+        file_path = item.photo_path
         db.delete(item)
         db.commit()
+        delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise
     except Exception as e:
         app_logger.exception(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete team member.")
+
+
+@router.post(
+    "/{member_id}/views",
+    status_code=status.HTTP_200_OK,
+    name="Increment Team Member Views",
+    response_model=ResponseModel,
+)
+def increment_views(member_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
+    try:
+        # updated_at is pinned to itself so a view doesn't count as an edit (ORM onupdate would bump it)
+        result = db.execute(
+            update(TeamMember).where(TeamMember.id == member_id).values(views=TeamMember.views + 1, updated_at=TeamMember.updated_at)
+        )
+        if result.rowcount == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found.")
+        db.commit()
+        log_activity(db, request, ActionType.VIEW_DETAIL, ResourceType.TEAM_MEMBER, member_id)
+        return ResponseModel()
+    except HTTPException:
+        raise
+    except Exception as e:
+        app_logger.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to increment views.")

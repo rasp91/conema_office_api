@@ -23,6 +23,7 @@ class ResourceType(StrEnum):
     DOCUMENT = "document"
     PRODUCTION = "production"
     TEAM_EVENT = "team-event"
+    TEAM_MEMBER = "team-member"
 
 
 class ActionType(StrEnum):

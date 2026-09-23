@@ -1,6 +1,6 @@
 from sqlalchemy.orm import selectinload, Session
-from sqlalchemy import select, func
-from fastapi import status, HTTPException, APIRouter, Depends, Request
+from sqlalchemy import update, select, func
+from fastapi import status, HTTPException, APIRouter, Request, Depends
 
 from src.database.models.kiosk_possibilist_categories import PossibilistCategory
 from src.database.models.kiosk_possibilist_documents import PossibilistDocument
@@ -13,13 +13,12 @@ from src.kiosk.possibilists.schemas import (
     PossibilistItemModel,
     ResponseModel,
 )
-from src.kiosk.possibilists import get_possibilist_or_404
 from src.activity_log.logger import log_activity
+from src.kiosk.possibilists import get_possibilist_or_404
 from src.database import get_db
 from src.upload import delete_file
 from src.logger import app_logger
-from src.enums import ResourceType, ActionType
-from src.enums import DocumentType
+from src.enums import ResourceType, DocumentType, ActionType
 from src.auth import get_auth_user
 
 router = APIRouter()
@@ -140,12 +139,15 @@ def update_possibilist(possibilist_id: int, data: PossibilistItemUpdateModel, db
             item.is_visible = data.is_visible
         if "category_id" in data.model_fields_set:
             item.category_id = data.category_id
+        stale_file = None
         if "thumbnail_path" in data.model_fields_set:
+            # Old file is removed from disk only after the commit succeeds
             if item.thumbnail_path and item.thumbnail_path != data.thumbnail_path:
-                delete_file(item.thumbnail_path)
+                stale_file = item.thumbnail_path
             item.thumbnail_path = data.thumbnail_path
 
         db.commit()
+        delete_file(stale_file)
         db.refresh(item)
         return item
     except HTTPException:
@@ -166,14 +168,13 @@ def delete_possibilist(possibilist_id: int, db: Session = Depends(get_db)) -> Re
     try:
         item = get_possibilist_or_404(possibilist_id, db)
 
-        if item.thumbnail_path:
-            delete_file(item.thumbnail_path)
-        for doc in item.documents:
-            if doc.type != DocumentType.YOUTUBE:
-                delete_file(doc.file_path)
+        # Collect files first, remove them from disk only once the DB delete is committed
+        files = [item.thumbnail_path] + [doc.file_path for doc in item.documents if doc.type != DocumentType.YOUTUBE]
 
         db.delete(item)
         db.commit()
+        for file_path in files:
+            delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise
@@ -190,10 +191,14 @@ def delete_possibilist(possibilist_id: int, db: Session = Depends(get_db)) -> Re
 )
 def increment_views(possibilist_id: int, request: Request, db: Session = Depends(get_db)) -> ResponseModel:
     try:
-        item = db.execute(select(PossibilistItem).where(PossibilistItem.id == possibilist_id)).scalar_one_or_none()
-        if not item:
+        # updated_at is pinned to itself so a view doesn't count as an edit (ORM onupdate would bump it)
+        result = db.execute(
+            update(PossibilistItem)
+            .where(PossibilistItem.id == possibilist_id)
+            .values(views=PossibilistItem.views + 1, updated_at=PossibilistItem.updated_at)
+        )
+        if result.rowcount == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Possibilist not found.")
-        item.views = (item.views or 0) + 1
         db.commit()
         log_activity(db, request, ActionType.VIEW_DETAIL, ResourceType.POSSIBILIST, possibilist_id)
         return ResponseModel()
@@ -250,10 +255,10 @@ def delete_document(possibilist_id: int, doc_id: int, db: Session = Depends(get_
         if not doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-        if doc.type != DocumentType.YOUTUBE:
-            delete_file(doc.file_path)
+        file_path = doc.file_path if doc.type != DocumentType.YOUTUBE else None
         db.delete(doc)
         db.commit()
+        delete_file(file_path)
         return ResponseModel()
     except HTTPException:
         raise

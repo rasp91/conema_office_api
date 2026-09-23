@@ -1,7 +1,9 @@
+from datetime import datetime
+
 from sqlalchemy.dialects.mysql import BIGINT
-from sqlalchemy.orm import mapped_column, Mapped
 from sqlalchemy.sql import func
-from sqlalchemy import JSON, String, Index, TIMESTAMP
+from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy import String, Index, TIMESTAMP, JSON
 
 from src.database.base import Base
 
@@ -20,7 +22,7 @@ class ActivityLog(Base):
     )
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, server_default=func.now(), index=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
