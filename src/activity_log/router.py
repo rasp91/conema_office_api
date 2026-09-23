@@ -1,5 +1,5 @@
-from datetime import timedelta, date
 import socket
+from datetime import timedelta, date
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_
@@ -10,6 +10,7 @@ from src.database.models.kiosk_internal_info_items import InternalInfoItem
 from src.database.models.kiosk_presentation_items import PresentationItem
 from src.database.models.kiosk_possibilist_items import PossibilistItem
 from src.database.models.kiosk_news_items import NewsItem
+from src.database.models.kiosk_team_events import TeamEvent
 from src.database.models.activity_logs import ActivityLog
 from src.database.models.kiosk_events import KioskEvent
 from src.activity_log.schemas import (
@@ -57,6 +58,7 @@ ITEM_TITLE_MODELS: dict[str, tuple[type, str]] = {
     ResourceType.POSSIBILIST: (PossibilistItem, "title"),
     ResourceType.PRESENTATION: (PresentationItem, "title"),
     ResourceType.SHAREPOINT_ARTICLE: (SharePointArticle, "title"),
+    ResourceType.TEAM_EVENT: (TeamEvent, "title"),
 }
 
 

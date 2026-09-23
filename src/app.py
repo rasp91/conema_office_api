@@ -52,6 +52,8 @@ from src.kiosk.possibilists.router import router as possibilists_router
 from src.kiosk.sharepoint.router import router as sharepoint_router
 from src.v1.guest_book.router import router as guest_book_router
 from src.kiosk.events.router import router as events_router
+from src.kiosk.team_members.router import router as team_members_router
+from src.kiosk.team_events.router import router as team_events_router
 from src.activity_log.router import router as activity_log_router
 from src.kiosk.news.router import router as news_router
 from src.v1.forms.router import router as forms_router
@@ -81,6 +83,10 @@ app.include_router(forms_router, prefix="/v1/forms", tags=["Forms"], dependencie
 app.include_router(news_router, prefix="/kiosk/news", tags=["News"], dependencies=[Depends(verify_api_key)])
 # Events router
 app.include_router(events_router, prefix="/kiosk/events", tags=["Events"], dependencies=[Depends(verify_api_key)])
+# Team Events router
+app.include_router(team_events_router, prefix="/kiosk/team-events", tags=["Team Events"], dependencies=[Depends(verify_api_key)])
+# Team Members router
+app.include_router(team_members_router, prefix="/kiosk/team-members", tags=["Team Members"], dependencies=[Depends(verify_api_key)])
 # Presentation categories router (must be registered before presentations to avoid /{id} conflict)
 app.include_router(
     presentation_categories_router,

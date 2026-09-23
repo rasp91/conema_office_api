@@ -21,6 +21,8 @@ class ResourceType(StrEnum):
     SHAREPOINT_ARTICLE = "sharepoint-article"
     HOME = "home"
     DOCUMENT = "document"
+    PRODUCTION = "production"
+    TEAM_EVENT = "team-event"
 
 
 class ActionType(StrEnum):
