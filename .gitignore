@@ -7,3 +7,4 @@ global.log
 data/
 
 .claude/settings.*
+web.config

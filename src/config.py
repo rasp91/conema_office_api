@@ -3,10 +3,11 @@ import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-# Load .env file
-if not os.path.isfile(os.path.join("\\".join(os.path.abspath(__file__).split("\\")[:-2]), ".env")):
-    raise FileNotFoundError(".env config file not found")
-load_dotenv(dotenv_path=".env", override=True)
+# Load .env file from the project root (independent of the working directory, e.g. when started by IIS)
+ENV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if not os.path.isfile(ENV_FILE):
+    raise FileNotFoundError(f".env config file not found: {ENV_FILE}")
+load_dotenv(dotenv_path=ENV_FILE, override=True)
 
 
 class Config(BaseSettings):

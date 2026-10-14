@@ -16,6 +16,7 @@ $AppPath     = "E:\\api\\office_api"
 $VenvPath    = "$AppPath\\venv"
 $Python      = "E:\\Python313\\python.exe"
 $AppPoolName = "rchl_office_api"
+$MsysBinPath = "C:\msys64\mingw64\bin"   # Pango/GTK DLLs for WeasyPrint (must match web.config)
 # -----------------------------------------------------------------------------
 
 Set-StrictMode -Version Latest
@@ -124,6 +125,18 @@ if ($LASTEXITCODE -ne 0) {
     Abort "requirements installation failed (exit $LASTEXITCODE)."
 }
 Write-Ok "Dependencies installed"
+
+# --- 4.1 Verify WeasyPrint (PDF generation) -----------------------------------
+Write-Step "Verifying WeasyPrint"
+if (-not (Test-Path (Join-Path $MsysBinPath "libpango-1.0-0.dll"))) {
+    Abort "Pango not found in $MsysBinPath. Install MSYS2 + mingw-w64-x86_64-pango (see README.md)."
+}
+$env:WEASYPRINT_DLL_DIRECTORIES = $MsysBinPath
+& $PythonExe -c "from weasyprint import HTML; HTML(string='<p>test</p>').write_pdf()"
+if ($LASTEXITCODE -ne 0) {
+    Abort "WeasyPrint failed to generate a test PDF (exit $LASTEXITCODE)."
+}
+Write-Ok "WeasyPrint OK"
 
 # --- 5. Alembic validation ----------------------------------------------------
 Write-Step "Running Alembic validation"

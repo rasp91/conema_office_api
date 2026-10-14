@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    IIS + HttpPlatformHandler configuration for Roechling Office API.
+    Copy to web.config in the application root and adjust the paths (see README.md).
+-->
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="httpPlatformHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" requireAccess="Script" />
+    </handlers>
+
+    <!--
+        processesPerApplication must stay 1: the SharePoint sync lock (_sync_lock) is in-process only.
+        app-dir makes "src.app:app" importable regardless of the working directory IIS starts the process in.
+    -->
+    <httpPlatform processPath="E:\api\office_api\venv\Scripts\python.exe"
+                  arguments="-m uvicorn src.app:app --app-dir E:\api\office_api --host 127.0.0.1 --port %HTTP_PLATFORM_PORT%"
+                  processesPerApplication="1"
+                  startupTimeLimit="120"
+                  startupRetryCount="3"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile="E:\api\office_api\logs\iis-stdout">
+      <environmentVariables>
+        <!-- Pango/GTK DLLs from MSYS2, required by WeasyPrint for PDF generation -->
+        <environmentVariable name="WEASYPRINT_DLL_DIRECTORIES" value="C:\msys64\mingw64\bin" />
+        <environmentVariable name="PYTHONIOENCODING" value="utf-8" />
+      </environmentVariables>
+    </httpPlatform>
+  </system.webServer>
+</configuration>

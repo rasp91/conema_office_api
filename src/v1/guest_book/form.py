@@ -1,10 +1,5 @@
-import sys
-import re
 import io
-
-# WeasyPrint is not supported on Windows, so we conditionally import it only on non-Windows platforms
-if sys.platform != "win32":
-    from weasyprint import HTML
+import re
 
 from jinja2 import Template
 
@@ -145,6 +140,9 @@ def generate_form(data: RegisterModel, form_data: str) -> io.BytesIO:
         signature_data=data.signature,
     )
     # Convert the rendered HTML to PDF
+    # Imported lazily so the API still starts when Pango is missing (Windows: MSYS2 + WEASYPRINT_DLL_DIRECTORIES, see README.md)
+    from weasyprint import HTML
+
     pdf_bytes = HTML(string=rendered_html).write_pdf()
     # Return the PDF as a BytesIO object
     return io.BytesIO(pdf_bytes)
@@ -204,5 +202,4 @@ def get_field_label(field_key: str, locale: str = "cs") -> str:
         },
     }
 
-    return labels.get(field_key, {}).get(locale, field_key)
     return labels.get(field_key, {}).get(locale, field_key)
