@@ -110,17 +110,17 @@ if (-not (Test-Path $PipExe) -or -not (Test-Path $PythonExe)) {
 # --- 4. Install dependencies --------------------------------------------------
 Write-Step "Installing dependencies"
 
-& $PipExe install --upgrade pip
+& $PythonExe -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) {
     Abort "pip self-upgrade failed (exit $LASTEXITCODE)."
 }
 
-& $PipExe install --upgrade setuptools wheel
+& $PythonExe -m pip install --upgrade setuptools wheel
 if ($LASTEXITCODE -ne 0) {
     Abort "setuptools/wheel upgrade failed (exit $LASTEXITCODE)."
 }
 
-& $PipExe install --upgrade -r (Join-Path $AppPath "requirements.txt")
+& $PythonExe -m pip install --upgrade -r (Join-Path $AppPath "requirements.txt")
 if ($LASTEXITCODE -ne 0) {
     Abort "requirements installation failed (exit $LASTEXITCODE)."
 }
